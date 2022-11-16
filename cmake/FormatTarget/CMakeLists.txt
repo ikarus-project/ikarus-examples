@@ -3,12 +3,16 @@ project(IkarusFormat)
 
 if(ADD_FORMATTARGET)
   include(../CPM.cmake)
-  CPMAddPackage(
-    NAME Format.cmake
-    VERSION 1.7.3
-    GITHUB_REPOSITORY TheLartians/Format.cmake
-    OPTIONS "FORMAT_SKIP_CMAKE NO" "CMAKE_FORMAT_EXCLUDE config.h.cmake"
-  )
+  cpmaddpackage(
+    NAME
+    Format.cmake
+    VERSION
+    1.7.3
+    GITHUB_REPOSITORY
+    TheLartians/Format.cmake
+    OPTIONS
+    "FORMAT_SKIP_CMAKE NO"
+    "CMAKE_FORMAT_EXCLUDE config.h.cmake")
 endif()
 
 if(ADD_CODESPELLTARGET)
@@ -30,19 +34,16 @@ if(ADD_CODESPELLTARGET)
         ${CMAKE_SOURCE_DIR}/tests
         ${CMAKE_SOURCE_DIR}/examples
         ${CMAKE_SOURCE_DIR}/docs
-        README.md
-    )
+        README.md)
     add_custom_target(
       codespell
       COMMAND ${CODESPELLCOMAND}
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    )
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_custom_target(
       fix-codespell
       COMMAND ${CODESPELLCOMAND} -w
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    )
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
   else()
     message(STATUS "python not found, codespell target not available")
 
