@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -150,9 +151,9 @@ int main(int argc, char **argv) {
   constexpr int gridDim = 2;
   //  /// ALUGrid Example
   //  using Grid = Dune::ALUGrid<gridDim, 2, Dune::cube, Dune::nonconforming>;
-  //  auto grid  = Dune::GmshReader<Grid>::read("../../tests/src/testFiles/unstructuredQuadscoarse.msh", false);
-  //  grid->globalRefine(1);
-  //  auto gridView = grid->leafGridView();
+  //  auto grid  =
+  //  Dune::GmshReader<Grid>::read("../../tests/src/testFiles/unstructuredQuadscoarse.msh",
+  //  false); grid->globalRefine(1); auto gridView = grid->leafGridView();
   using Grid        = Dune::YaspGrid<gridDim>;
   const double L    = 1;
   const double h    = 1;

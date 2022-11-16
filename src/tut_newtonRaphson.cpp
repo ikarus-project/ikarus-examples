@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -23,8 +24,8 @@
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
-auto f(double& x) { return 0.5 * x * x + x - 2; }
-auto df(double& x) { return x + 1; }
+auto f(double &x) { return 0.5 * x * x + x - 2; }
+auto df(double &x) { return x + 1; }
 
 void newtonRaphsonVeryBasicExample() {
   double x               = 13;
@@ -32,8 +33,8 @@ void newtonRaphsonVeryBasicExample() {
   const int maxIter      = 20;
   const double xExpected = std::sqrt(5.0) - 1.0;
 
-  auto fvLambda  = [&](auto&& x) { return f(x); };
-  auto dfvLambda = [&](auto&& x) { return df(x); };
+  auto fvLambda  = [&](auto &&x) { return f(x); };
+  auto dfvLambda = [&](auto &&x) { return df(x); };
   Ikarus::NonLinearOperator nonLinOp(Ikarus::linearAlgebraFunctions(fvLambda, dfvLambda), Ikarus::parameter(x));
 
   int iterCount = 1;
@@ -73,8 +74,8 @@ public:
 void newtonRaphsonBasicExampleWithLogger() {
   double x = 13;
 
-  auto fvLambda  = [&](auto&& x) { return f(x); };
-  auto dfvLambda = [&](auto&& x) { return df(x); };
+  auto fvLambda  = [&](auto &&x) { return f(x); };
+  auto dfvLambda = [&](auto &&x) { return df(x); };
   Ikarus::NonLinearOperator nonLinOp(Ikarus::linearAlgebraFunctions(fvLambda, dfvLambda), Ikarus::parameter(x));
 
   const double eps       = 1e-10;
@@ -89,8 +90,8 @@ void newtonRaphsonBasicExampleWithLogger() {
   nr.subscribe(NonLinearSolverMessages::ITERATION_STARTED, ourSimpleObserver);
   // nr.subscribeAll(ourSimpleObserver);
   // auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
-  // nr.subscribe(NonLinearSolverMessages::FINISHED_SUCESSFULLY, nonLinearSolverObserver);
-  // nr.subscribeAll(nonLinearSolverObserver);
+  // nr.subscribe(NonLinearSolverMessages::FINISHED_SUCESSFULLY,
+  // nonLinearSolverObserver); nr.subscribeAll(nonLinearSolverObserver);
 
   const auto solverInfo = nr.solve(x);
 

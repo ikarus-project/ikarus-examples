@@ -2,20 +2,20 @@ cmake_minimum_required(VERSION 3.13)
 project(
   ikarus-examples
   VERSION 0.2
-  LANGUAGES C CXX)
+  LANGUAGES C CXX
+)
 
 if(NOT
    (dune-common_DIR
     OR dune-common_ROOT
-    OR "${CMAKE_PREFIX_PATH}" MATCHES ".*dune-common.*"))
-  string(REPLACE ${PROJECT_NAME} dune-common dune-common_DIR
-                 ${PROJECT_BINARY_DIR})
+    OR "${CMAKE_PREFIX_PATH}" MATCHES ".*dune-common.*")
+)
+  string(REPLACE ${PROJECT_NAME} dune-common dune-common_DIR ${PROJECT_BINARY_DIR})
 endif()
 
 # find dune-common and set the module path
 find_package(dune-common REQUIRED)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules"
-     ${dune-common_MODULE_PATH})
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules" ${dune-common_MODULE_PATH})
 
 # include the dune macros
 include(DuneMacros)

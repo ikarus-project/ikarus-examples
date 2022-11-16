@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -59,18 +60,18 @@ void exampleTrussElement() {
   auto numDofs           = basis.size();
   Eigen::MatrixXd K_Glob = Eigen::MatrixXd::Zero(numDofs, numDofs);
 
-  for (auto& ele : elements(gridView)) {
+  for (auto &ele : elements(gridView)) {
     localView.bind(ele);
-    auto& fe = localView.tree().finiteElement();
+    auto &fe = localView.tree().finiteElement();
     Ikarus::LocalBasis localBasis(fe.localBasis());
-    const auto& rule = Dune::QuadratureRules<double, 1>::rule(ele.type(), numGP, Dune::QuadratureType::GaussLegendre);
+    const auto &rule = Dune::QuadratureRules<double, 1>::rule(ele.type(), numGP, Dune::QuadratureType::GaussLegendre);
 
     Eigen::VectorXd dNdxi = Eigen::VectorXd::Zero(2);
     Eigen::MatrixXd K     = Eigen::MatrixXd::Zero(2, 2);
     Eigen::VectorXd B     = Eigen::VectorXd::Zero(2);
 
     auto detJ = ele.geometry().integrationElement(0.0);
-    for (auto& gp : rule) {
+    for (auto &gp : rule) {
       localBasis.evaluateJacobian(gp.position(), dNdxi);
       B = dNdxi / detJ;
       K += EA * B * B.transpose() * detJ * gp.weight();
@@ -98,8 +99,8 @@ void exampleTrussElement() {
   std::cout << "Displacement: " << D_GlobRed(Eigen::last) << "\n";
 }
 
-auto TimoshenkoBeamStiffness(auto localView, auto gridElement, auto quadratureRule, const Eigen::Matrix2d& C,
-                             auto& qFunction) {
+auto TimoshenkoBeamStiffness(auto localView, auto gridElement, auto quadratureRule, const Eigen::Matrix2d &C,
+                             auto &qFunction) {
   using namespace Dune::Indices;
 
   Ikarus::LocalBasis basisW(localView.tree().child(_0).finiteElement().localBasis());
@@ -123,7 +124,7 @@ auto TimoshenkoBeamStiffness(auto localView, auto gridElement, auto quadratureRu
   Eigen::VectorXd dNphiDxi = Eigen::VectorXd::Zero(numDofsPhi);
 
   // integration point loop
-  for (auto& gp : quadratureRule) {
+  for (auto &gp : quadratureRule) {
     // evaluate ansatz functions and their derivatives
     basisW.evaluateJacobian(gp.position(), dNwDxi);
     basisW.evaluateFunction(gp.position(), NwDxi);
@@ -155,25 +156,26 @@ auto TimoshenkoBeamStiffness(auto localView, auto gridElement, auto quadratureRu
 
 enum class TimoschenkoBeam { w, phi };
 
-unsigned int getGlobalDofIdImpl(const auto& basis, const double position) {
+unsigned int getGlobalDofIdImpl(const auto &basis, const double position) {
   auto localView       = basis.localView();
   auto seDOFs          = subEntityDOFs(basis);
-  const auto& gridView = basis.gridView();
-  for (auto& element : elements(gridView)) {
+  const auto &gridView = basis.gridView();
+  for (auto &element : elements(gridView)) {
     localView.bind(element);
     for (unsigned int i = 0; i < element.subEntities(1); ++i) {
       if (Dune::FloatCmp::eq(element.template subEntity<1>(i).geometry().center()[0], position, 1e-8)) {
-        auto& localIndex = seDOFs.bind(localView, i, 1);
+        auto &localIndex = seDOFs.bind(localView, i, 1);
         assert(localIndex.size() == 1 && "It is expected that only one w-DOF is associated with a vertex");
         return localView.index(localIndex[0])[0];
       }
     }
   }
   throw std::runtime_error(
-      "There is no displacement dof at the requested position. Currently, only DOFs at vertices are supported.");
+      "There is no displacement dof at the requested position. Currently, only "
+      "DOFs at vertices are supported.");
 }
 
-unsigned int getGlobalDofId(TimoschenkoBeam requestedQuantity, const auto& basis, const double position) {
+unsigned int getGlobalDofId(TimoschenkoBeam requestedQuantity, const auto &basis, const double position) {
   using namespace Dune::Indices;
   if (requestedQuantity == TimoschenkoBeam::w)
     return getGlobalDofIdImpl(subspaceBasis(basis, _0), position);
@@ -183,14 +185,14 @@ unsigned int getGlobalDofId(TimoschenkoBeam requestedQuantity, const auto& basis
     throw std::runtime_error("The requested quantity is not supported");
 }
 
-void plotDeformedTimoschenkoBeam(auto& gridView, auto& basis, auto& d_glob, double EI, double GA, double L, double F,
+void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, double EI, double GA, double L, double F,
                                  double aq, double bq, double cq) {
   using namespace Dune::Indices;
   auto wGlobal   = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis, _0), d_glob);
   auto phiGlobal = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis, _1), d_glob);
 
   auto wSol = [&](auto xv) {
-    const auto& x = xv[0];
+    const auto &x = xv[0];
     return (2 * Dune::power(L, 3) * aq + 3 * Dune::power(L, 2) * bq + 6 * L * cq + 6 * F) * x / (6 * GA)
            - (-3 * GA * Dune::power(L, 4) * aq - 4 * GA * Dune::power(L, 3) * bq - 6 * GA * Dune::power(L, 2) * cq
               - 12 * F * GA * L + 12 * EI * cq)
@@ -202,7 +204,7 @@ void plotDeformedTimoschenkoBeam(auto& gridView, auto& basis, auto& d_glob, doub
            + (Dune::power(x, 6) / (360 * EI) - Dune::power(x, 4) / (12 * GA)) * aq;
   };
   auto phiSol = [&](auto xv) {
-    const auto& x = xv[0];
+    const auto &x = xv[0];
     return (-2 * aq * Dune::power(x, 5) - 5 * bq * Dune::power(x, 4) - 20 * cq * Dune::power(x, 3)
             + (20 * Dune::power(L, 3) * aq + 30 * Dune::power(L, 2) * bq + 60 * L * cq + 60 * F) * Dune::power(x, 2)
             + (-30 * Dune::power(L, 4) * aq - 40 * Dune::power(L, 3) * bq - 60 * Dune::power(L, 2) * cq - 120 * F * L)
@@ -228,7 +230,7 @@ void plotDeformedTimoschenkoBeam(auto& gridView, auto& basis, auto& d_glob, doub
   std::vector<double> x = linspace(0, 1, 10);
   std::vector<double> x_L;
   std::vector<double> yw, yphi, ywAna, yphiAna;
-  for (auto& edge : elements(gridView)) {
+  for (auto &edge : elements(gridView)) {
     wLocal.bind(edge);
     wLocalAnalytic.bind(edge);
     phiLocal.bind(edge);
@@ -272,7 +274,7 @@ void exampleTimoshenkoBeam(int polynomialOrderW, int polynomialOrderPhi, int num
   const double aq      = 0.1;
   const double bq      = 0.1;
   const double cq      = 0.1;
-  const auto qFunction = [&](auto&& x) { return (aq * Dune::power(x[0], 2) + bq * x[0] + cq); };
+  const auto qFunction = [&](auto &&x) { return (aq * Dune::power(x[0], 2) + bq * x[0] + cq); };
 
   Eigen::Matrix2d C;
   C << EI, 0, 0, GA;
@@ -293,11 +295,11 @@ void exampleTimoshenkoBeam(int polynomialOrderW, int polynomialOrderPhi, int num
   Eigen::VectorXd F_ExtGlob = Eigen::VectorXd::Zero(numDofs);
   Eigen::MatrixXd K_Glob    = Eigen::MatrixXd::Zero(numDofs, numDofs);
 
-  for (auto& ele : elements(gridView)) {
+  for (auto &ele : elements(gridView)) {
     localView.bind(ele);
 
     // Define the integration rule
-    const auto& rule = Dune::QuadratureRules<double, 1>::rule(ele.type(), numGP, Dune::QuadratureType::GaussLegendre);
+    const auto &rule = Dune::QuadratureRules<double, 1>::rule(ele.type(), numGP, Dune::QuadratureType::GaussLegendre);
 
     // get local stiffness matrix
     const auto [K_local, Fext_local] = TimoshenkoBeamStiffness(localView, ele, rule, C, qFunctionGlobal);

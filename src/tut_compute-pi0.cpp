@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -38,16 +39,17 @@ int main() {
 
   /// Calculate area from volume function of elements
   double area1 = 0.0;
-  for (auto& element : elements(gridView))
+  for (auto &element : elements(gridView))
     area1 += element.geometry().volume();
 
   /// Integrate function using integration rule on grid
-  auto f       = [](auto&& global) { return sqrt(global[0] * global[0] + global[1] * global[1]); };
+  auto f       = [](auto &&global) { return sqrt(global[0] * global[0] + global[1] * global[1]); };
   double area2 = 0.0;
-  for (auto& element : elements(gridView)) {
-    const auto& rule = Dune::QuadratureRules<double, 2>::rule(element.type(), 1, Dune::QuadratureType::GaussLegendre);
-    for (auto& gp : rule)
-      //      area2 += element.geometry().integrationElement(gp.position()) * gp.weight();
+  for (auto &element : elements(gridView)) {
+    const auto &rule = Dune::QuadratureRules<double, 2>::rule(element.type(), 1, Dune::QuadratureType::GaussLegendre);
+    for (auto &gp : rule)
+      //      area2 += element.geometry().integrationElement(gp.position()) *
+      //      gp.weight();
       area2 += f(element.geometry().global(gp.position())) * element.geometry().integrationElement(gp.position())
                * gp.weight();  // integrationElement --> JacobiDeterminant
   }
@@ -63,7 +65,7 @@ int main() {
     std::cout << "This gridview contains: ";
     std::cout << gridViewRefined.size(0) << " elements" << std::endl;
     draw(gridViewRefined);
-    for (auto& element : elements(gridViewRefined)) {
+    for (auto &element : elements(gridViewRefined)) {
       area1 += element.geometry().volume();
     }
     std::cout << area1 << " " << std::numbers::pi << std::endl;
@@ -72,8 +74,8 @@ int main() {
   std::vector<double> areas;
   areas.resize(gridView.size(0));
 
-  auto& indexSet = gridView.indexSet();
-  for (auto& ele : elements(gridView))
+  auto &indexSet = gridView.indexSet();
+  for (auto &ele : elements(gridView))
     areas[indexSet.index(ele)] = ele.geometry().volume();
 
   Dune::VTKWriter vtkWriter(gridView);
@@ -82,9 +84,9 @@ int main() {
 
   /// Calculate circumference and compare to pi
   double circumference = 0.0;
-  for (auto& element : elements(gridView))
+  for (auto &element : elements(gridView))
     if (element.hasBoundaryIntersections())
-      for (auto& intersection : intersections(gridView, element))
+      for (auto &intersection : intersections(gridView, element))
         if (intersection.boundary()) circumference += intersection.geometry().volume();
 
   std::cout << circumference << " " << std::numbers::pi << std::endl;

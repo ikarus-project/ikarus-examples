@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -19,9 +20,6 @@
 
 #include <config.h>
 
-#include <ikarus/finiteElements/feBases/powerBasisFE.hh>
-#include <ikarus/finiteElements/feTraits.hh>
-
 #include <matplot/matplot.h>
 
 #include <dune/foamgrid/foamgrid.hh>
@@ -39,6 +37,8 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/controlRoutines/loadControl.hh>
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
+#include <ikarus/finiteElements/feBases/powerBasisFE.hh>
+#include <ikarus/finiteElements/feTraits.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
@@ -58,18 +58,18 @@ struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Bas
   using LocalView         = typename Basis::LocalView;
   using FERequirementType = typename BaseAD::FERequirementType;
   using Traits            = TraitsFromLocalView<LocalView>;
-  Truss(const Basis& basis, const typename LocalView::Element& element, double p_EA)
+  Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
       : BaseDisp(basis, element), BaseAD(basis, element), localView_{basis.localView()}, EA{p_EA} {
     localView_.bind(element);
   }
 
 private:
   template <class Scalar>
-  Scalar calculateScalarImpl(const FERequirementType& par, const Eigen::VectorX<Scalar>& dx) const {
-    const auto& d      = par.getSolution(Ikarus::FESolutions::displacement);
-    const auto& lambda = par.getParameter(FEParameter::loadfactor);
+  Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
+    const auto &d      = par.getSolution(Ikarus::FESolutions::displacement);
+    const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
-    auto& ele     = localView_.element();
+    auto &ele     = localView_.element();
     const auto X1 = Ikarus::toEigenVector(ele.geometry().corner(0));
     const auto X2 = Ikarus::toEigenVector(ele.geometry().corner(1));
 
@@ -117,12 +117,12 @@ int main() {
   /// Create finite elements
   const double EA = 100;
   std::vector<Truss<decltype(basis)>> fes;
-  for (auto& ele : elements(gridView))
+  for (auto &ele : elements(gridView))
     fes.emplace_back(basis, ele, EA);
 
   /// Collect dirichlet nodes
   std::vector<bool> dirichletFlags(basis.size(), false);
-  Dune::Functions::forEachBoundaryDOF(basis, [&](auto&& index) { dirichletFlags[index] = true; });
+  Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&index) { dirichletFlags[index] = true; });
 
   /// Create assembler
   auto denseFlatAssembler = DenseFlatAssembler(basis, fes, dirichletFlags);
@@ -132,17 +132,17 @@ int main() {
   Eigen::VectorXd d;
   d.setZero(basis.size());
 
-  auto RFunction = [&](auto&& u, auto&& lambdaLocal) -> auto& {
+  auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
                                      .insertGlobalSolution(Ikarus::FESolutions::displacement, u)
                                      .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
                                      .addAffordance(Ikarus::VectorAffordances::forces)
                                      .build();
-    auto& R = denseFlatAssembler.getVector(req);
+    auto &R = denseFlatAssembler.getVector(req);
     R[3] -= -lambdaLocal;
     return R;
   };
-  auto KFunction = [&](auto&& u, auto&& lambdaLocal) -> auto& {
+  auto KFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
                                      .insertGlobalSolution(Ikarus::FESolutions::displacement, u)
                                      .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
@@ -160,20 +160,23 @@ int main() {
   auto nr = Ikarus::makeNewtonRaphson(nonLinOp, std::move(linSolver));
   nr->setup({.tol = 1e-8, .maxIter = 100});
 
-  /// Create Observer to write information of the non-linear solver on the console
+  /// Create Observer to write information of the non-linear solver on the
+  /// console
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
   const int loadSteps = 10;
   Eigen::Matrix3Xd lambdaAndDisp;
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
-  /// Create Observer which executes when control routines messages SOLUTION_CHANGED
+  /// Create Observer which executes when control routines messages
+  /// SOLUTION_CHANGED
   auto lvkObserver = std::make_shared<Ikarus::GenericControlObserver>(ControlMessages::SOLUTION_CHANGED, [&](int step) {
     lambdaAndDisp(0, step) = lambda;
     lambdaAndDisp(1, step) = d[2];
     lambdaAndDisp(2, step) = d[3];
   });
 
-  /// Create Observer which writes vtk files when control routines messages SOLUTION_CHANGED
+  /// Create Observer which writes vtk files when control routines messages
+  /// SOLUTION_CHANGED
   auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(basis)>>(basis, d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("TestTruss");
@@ -196,7 +199,7 @@ int main() {
   xlabel("y-Displacement");
   ylabel("LoadFactor");
 
-  auto analyticalLoadDisplacementCurve = [&](auto& w) {
+  auto analyticalLoadDisplacementCurve = [&](auto &w) {
     const double Ltruss = std::sqrt(h * h + L * L);
     return EA * Dune::power(h, 3) / Dune::power(Ltruss, 3)
            * (w / h - 1.5 * Dune::power(w / h, 2) + 0.5 * Dune::power(w / h, 3));

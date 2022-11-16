@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -47,31 +48,39 @@
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
   using namespace Ikarus;
   constexpr int gridDim = 2;
   //  //  /// ALUGrid Example
   //  using Grid = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
-  //  auto grid  = Dune::GmshReader<Grid>::read("../../tests/src/testFiles/unstructuredTrianglesfine.msh", false);
-  //  grid->globalRefine(1);
+  //  auto grid  =
+  //  Dune::GmshReader<Grid>::read("../../tests/src/testFiles/unstructuredTrianglesfine.msh",
+  //  false); grid->globalRefine(1);
   /// IGA Grid Example
   constexpr auto dimworld = 2;
   //  const std::array<int, gridDim> order = {2, 2};
 
-  //  const std::array<std::vector<double>, gridDim> knotSpans = {{{0, 0, 0, 1, 1, 1}, {0, 0, 0, 1, 1, 1}}};
+  //  const std::array<std::vector<double>, gridDim> knotSpans = {{{0, 0, 0, 1,
+  //  1, 1}, {0, 0, 0, 1, 1, 1}}};
   //
-  //  using ControlPoint = Dune::IGA::NURBSPatchData<gridDim, dimworld>::ControlPointType;
+  //  using ControlPoint = Dune::IGA::NURBSPatchData<gridDim,
+  //  dimworld>::ControlPointType;
   //
   //  const std::vector<std::vector<ControlPoint>> controlPoints
-  //      = {{{.p = {0, 0}, .w = 5}, {.p = {0.5, 0}, .w = 1}, {.p = {1, 0}, .w = 1}},
-  //         {{.p = {0, 0.5}, .w = 1}, {.p = {0.5, 0.5}, .w = 10}, {.p = {1, 0.5}, .w = 1}},
-  //         {{.p = {0, 1}, .w = 1}, {.p = {0.5, 1}, .w = 1}, {.p = {1, 1}, .w = 1}}};
+  //      = {{{.p = {0, 0}, .w = 5}, {.p = {0.5, 0}, .w = 1}, {.p = {1, 0}, .w =
+  //      1}},
+  //         {{.p = {0, 0.5}, .w = 1}, {.p = {0.5, 0.5}, .w = 10}, {.p = {1,
+  //         0.5}, .w = 1}},
+  //         {{.p = {0, 1}, .w = 1}, {.p = {0.5, 1}, .w = 1}, {.p = {1, 1}, .w =
+  //         1}}};
   //
-  //  std::array<int, gridDim> dimsize = {(int)(controlPoints.size()), (int)(controlPoints[0].size())};
+  //  std::array<int, gridDim> dimsize = {(int)(controlPoints.size()),
+  //  (int)(controlPoints[0].size())};
   //
-  //  auto controlNet = Dune::IGA::NURBSPatchData<gridDim, dimworld>::ControlPointNetType(dimsize, controlPoints);
-  //  using Grid      = Dune::IGA::NURBSGrid<gridDim, dimworld>;
+  //  auto controlNet = Dune::IGA::NURBSPatchData<gridDim,
+  //  dimworld>::ControlPointNetType(dimsize, controlPoints); using Grid      =
+  //  Dune::IGA::NURBSGrid<gridDim, dimworld>;
   //
   //  Dune::IGA::NURBSPatchData<gridDim, dimworld> patchData;
   //  patchData.knotSpans     = knotSpans;
@@ -92,7 +101,7 @@ int main(int argc, char** argv) {
   auto grid                               = std::make_shared<Grid>(bbox, elementsPerDirection);
 
   auto gridView        = grid->leafGridView();
-  const auto& indexSet = gridView.indexSet();
+  const auto &indexSet = gridView.indexSet();
 
   Dune::BitSetVector<1> neumannVertices(gridView.size(2), false);
 
@@ -105,7 +114,7 @@ int main(int argc, char** argv) {
 
   auto pythonNeumannVertices = Python::make_function<bool>(Python::evaluate(lambdaNeumannVertices));
 
-  for (auto&& vertex : vertices(gridView)) {
+  for (auto &&vertex : vertices(gridView)) {
     bool isNeumann                          = pythonNeumannVertices(vertex.geometry().corner(0));
     neumannVertices[indexSet.index(vertex)] = isNeumann;
   }
@@ -113,7 +122,8 @@ int main(int argc, char** argv) {
   BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
   using namespace Dune::Functions::BasisFactory;
-  //  auto basis = makeBasis(gridView, power<gridDim>(gridView.getPreBasis(), FlatInterleaved()));
+  //  auto basis = makeBasis(gridView, power<gridDim>(gridView.getPreBasis(),
+  //  FlatInterleaved()));
   auto basis = makeBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
@@ -124,7 +134,7 @@ int main(int argc, char** argv) {
   draw(gridView);
   auto localView = basis.localView();
   std::vector<Ikarus::NonLinearElasticityFE<decltype(basis)>> fes;
-  auto volumeLoad = [](auto& globalCoord, auto& lamb) {
+  auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
     fext[1] = 2 * lamb * 0;
@@ -132,7 +142,7 @@ int main(int argc, char** argv) {
     return fext;
   };
 
-  auto neumannBoundaryLoad = [](auto& globalCoord, auto& lamb) {
+  auto neumannBoundaryLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
     fext[1] = lamb / 40;
@@ -140,12 +150,12 @@ int main(int argc, char** argv) {
     return fext;
   };
 
-  for (auto& element : elements(gridView))
+  for (auto &element : elements(gridView))
     fes.emplace_back(basis, element, 1000, 0.3, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
 
   std::vector<bool> dirichletFlags(basis.size(), false);
 
-  Dune::Functions::forEachBoundaryDOF(basis, [&](auto&& localIndex, auto&& localView, auto&& intersection) {
+  Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&localIndex, auto &&localView, auto &&intersection) {
     if (std::abs(intersection.geometry().center()[0]) < 1e-8) {
       dirichletFlags[localView.index(localIndex)[0]] = true;
     }
@@ -157,7 +167,7 @@ int main(int argc, char** argv) {
   d.setZero(basis.size());
   double lambda = 0.0;
 
-  auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
+  auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
                                      .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
                                      .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
@@ -166,7 +176,7 @@ int main(int argc, char** argv) {
     return sparseAssembler.getVector(req);
   };
 
-  auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
+  auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
                                      .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
                                      .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
@@ -175,7 +185,7 @@ int main(int argc, char** argv) {
     return sparseAssembler.getMatrix(req);
   };
 
-  auto energyFunction = [&](auto&& disp_, auto&& lambdaLocal) -> auto& {
+  auto energyFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
                                      .insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
                                      .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)

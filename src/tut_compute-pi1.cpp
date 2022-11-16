@@ -1,6 +1,7 @@
 /*
- * This file is part of the Ikarus distribution (https://github.com/IkarusRepo/Ikarus).
- * Copyright (c) 2022. The Ikarus developers.
+ * This file is part of the Ikarus distribution
+ * (https://github.com/IkarusRepo/Ikarus). Copyright (c) 2022. The Ikarus
+ * developers.
  *
  * This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -31,8 +32,8 @@
 #include <ikarus/utils/drawing/griddrawer.hh>
 
 struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
-  UnitCircleBoundary(const Dune::FieldVector<double, 2>& a, const Dune::FieldVector<double, 2>& b) : corners{{a, b}} {}
-  Dune::FieldVector<double, 2> operator()(const Dune::FieldVector<double, 1>& local) const override {
+  UnitCircleBoundary(const Dune::FieldVector<double, 2> &a, const Dune::FieldVector<double, 2> &b) : corners{{a, b}} {}
+  Dune::FieldVector<double, 2> operator()(const Dune::FieldVector<double, 1> &local) const override {
     Dune::FieldVector<double, 2> result = {0, 0};
     double omega                        = std::acos(corners[0] * corners[1]);
     return std::sin((1 - local[0]) * omega) / sin(omega) * corners[0] + sin(local[0] * omega) / sin(omega) * corners[1];
@@ -41,20 +42,21 @@ struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
   std::array<Dune::FieldVector<double, 2>, 2> corners;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
 
   /// Create grid from 6 triagnles align in unit disc
   using namespace Dune;
   constexpr int gridDim = 2;
   Dune::GridFactory<Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>> gridFactory;
-  //  std::array<FieldVector<double, 2>, 4> corners0 = {{{-sqrt(2) / 2, -sqrt(2) / 2}, {sqrt(2) / 2, -sqrt(2) / 2},
-  //  {sqrt(2) / 2, sqrt(2) / 2}, {-sqrt(2) / 2, sqrt(2) / 2}}};
+  //  std::array<FieldVector<double, 2>, 4> corners0 = {{{-sqrt(2) / 2, -sqrt(2)
+  //  / 2}, {sqrt(2) / 2, -sqrt(2) / 2}, {sqrt(2) / 2, sqrt(2) / 2}, {-sqrt(2) /
+  //  2, sqrt(2) / 2}}};
   Eigen::Vector2d v(1, 0);
   std::array<FieldVector<double, 2>, 6> corners0;
   Eigen::Rotation2D<double> R;
   R.angle() = 0.0;
-  for (auto& corner : corners0) {
+  for (auto &corner : corners0) {
     Eigen::Vector2d a = R * v;
     corner[0]         = a[0];
     corner[1]         = a[1];
@@ -89,15 +91,15 @@ int main(int argc, char** argv) {
   draw(gridView);
 
   double area1 = 0.0;
-  for (const auto& element : elements(gridView)) {
+  for (const auto &element : elements(gridView)) {
     area1 += element.geometry().volume();
   }
 
-  auto f       = [](auto&& global) { return sqrt(global[0] * global[0] + global[1] * global[1]); };
+  auto f       = [](auto &&global) { return sqrt(global[0] * global[0] + global[1] * global[1]); };
   double area2 = 0.0;
-  for (auto& element : elements(gridView)) {
-    const auto& rule = Dune::QuadratureRules<double, 2>::rule(element.type(), 1, Dune::QuadratureType::GaussLegendre);
-    for (auto& gp : rule)
+  for (auto &element : elements(gridView)) {
+    const auto &rule = Dune::QuadratureRules<double, 2>::rule(element.type(), 1, Dune::QuadratureType::GaussLegendre);
+    for (auto &gp : rule)
       area2 += element.geometry().integrationElement(gp.position()) * gp.weight();
   }
 
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
     area1 = 0.0;
     /// Refine grid entities if they live at the boundary
     //    grid->globalRefine(1);
-    for (const auto& ele : elements(grid->leafGridView())) {
+    for (const auto &ele : elements(grid->leafGridView())) {
       if (ele.hasBoundaryIntersections()) grid->mark(1, ele);
     }
     grid->preAdapt();
@@ -117,7 +119,7 @@ int main(int argc, char** argv) {
     std::cout << "This gridview contains: ";
     std::cout << gridViewRefined.size(0) << " elements" << std::endl;
 
-    for (auto& element : elements(gridViewRefined))
+    for (auto &element : elements(gridViewRefined))
       area1 += element.geometry().volume();
 
     std::cout << "area1 " << area1 << " " << std::numbers::pi << std::endl;
@@ -125,9 +127,9 @@ int main(int argc, char** argv) {
   }
   /// Calculate circumference and compare to pi
   double circumference = 0.0;
-  for (auto& element : elements(grid->leafGridView()))
+  for (auto &element : elements(grid->leafGridView()))
     if (element.hasBoundaryIntersections())
-      for (auto& intersection : intersections(grid->leafGridView(), element))
+      for (auto &intersection : intersections(grid->leafGridView(), element))
         if (intersection.boundary()) circumference += intersection.geometry().volume();
 
   std::cout << circumference / 2 << " " << std::numbers::pi << std::endl;
