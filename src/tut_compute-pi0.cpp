@@ -32,7 +32,7 @@
 int main() {
   constexpr int gridDim = 2;  // (1)
   using Grid            = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
-  auto grid             = Dune::GmshReader<Grid>::read("../../examples/src/testFiles/circleCoarse.msh", false);
+  auto grid             = Dune::GmshReader<Grid>::read("testFiles/circleCoarse.msh", false);
   auto gridView         = grid->leafGridView();  // (2)
 
   draw(gridView);

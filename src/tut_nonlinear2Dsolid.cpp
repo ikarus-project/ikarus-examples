@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   //  //  /// ALUGrid Example
   //  using Grid = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
   //  auto grid  =
-  //  Dune::GmshReader<Grid>::read("../../tests/src/testFiles/unstructuredTrianglesfine.msh",
+  //  Dune::GmshReader<Grid>::read("testFiles/unstructuredTrianglesfine.msh",
   //  false); grid->globalRefine(1);
   /// IGA Grid Example
   constexpr auto dimworld = 2;
