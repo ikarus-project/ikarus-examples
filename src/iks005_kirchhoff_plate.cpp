@@ -317,5 +317,7 @@ int main() {
   auto p = ax->loglog(dofsVec, l2Evcector);
   p->line_width(2);
   p->marker(line_spec::marker_style::asterisk);
-  show();
+  //  f->draw();
+  using namespace std::chrono_literals;
+  std::this_thread::sleep_for(5s);
 }

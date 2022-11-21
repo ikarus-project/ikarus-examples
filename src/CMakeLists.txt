@@ -24,5 +24,5 @@ foreach(programSourceFile ${programSourceFiles})
 endforeach()
 
 # Copy the example grid used for testing into the build dir
-file(COPY testFiles/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/testFiles)
+file(COPY auxiliaryFiles/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/auxiliaryFiles)
 

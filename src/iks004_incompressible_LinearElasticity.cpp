@@ -149,11 +149,7 @@ int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
   using namespace Ikarus;
   constexpr int gridDim = 2;
-  //  /// ALUGrid Example
-  //  using Grid = Dune::ALUGrid<gridDim, 2, Dune::cube, Dune::nonconforming>;
-  //  auto grid  =
-  //  Dune::GmshReader<Grid>::read("../../tests/src/testFiles/unstructuredQuadscoarse.msh",
-  //  false); grid->globalRefine(1); auto gridView = grid->leafGridView();
+
   using Grid        = Dune::YaspGrid<gridDim>;
   const double L    = 1;
   const double h    = 1;

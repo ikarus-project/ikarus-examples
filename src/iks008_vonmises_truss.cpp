@@ -108,7 +108,7 @@ int main() {
   gridFactory.insertElement(Dune::GeometryTypes::line, {1, 2});
   auto grid     = gridFactory.createGrid();
   auto gridView = grid->leafGridView();
-  draw(gridView);
+  // draw(gridView);
 
   using namespace Dune::Functions::BasisFactory;
   /// Construct basis
@@ -211,5 +211,7 @@ int main() {
   p[0]->line_width(2);
   p[1]->line_width(2);
   p[1]->marker(line_spec::marker_style::asterisk);
-  show();
+  // f->draw();
+  //  using namespace std::chrono_literals;
+  //  std::this_thread::sleep_for(5s);
 }
