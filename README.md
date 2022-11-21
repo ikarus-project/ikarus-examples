@@ -1,3 +1,6 @@
+[![Debian](https://github.com/IkarusRepo/IkarusExamples/actions/workflows/debian.yml/badge.svg)](https://github.com/IkarusRepo/IkarusExamples/actions/workflows/debian.yml)
+[![CodeStyle](https://github.com/IkarusRepo/IkarusExamples/actions/workflows/style.yml/badge.svg)](https://github.com/IkarusRepo/IkarusExamples/actions/workflows/style.yml)
+[![codespell](https://github.com/IkarusRepo/IkarusExamples/actions/workflows/codespell.yml/badge.svg)](https://github.com/IkarusRepo/IkarusExamples/actions/workflows/codespell.yml)
 # Ikarus
 ## Examples
 
