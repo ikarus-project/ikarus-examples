@@ -45,7 +45,7 @@ struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
 int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
 
-  /// Create grid from 6 triagnles align in unit disc
+  /// Create grid from 6 triangles align in unit disc
   using namespace Dune;
   constexpr int gridDim = 2;
   Dune::GridFactory<Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>> gridFactory;
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 
   auto grid     = gridFactory.createGrid();
   auto gridView = grid->leafGridView();
-  draw(gridView);
+  // draw(gridView);
 
   double area1 = 0.0;
   for (const auto &element : elements(gridView)) {
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
       area1 += element.geometry().volume();
 
     std::cout << "area1 " << area1 << " " << std::numbers::pi << std::endl;
-    draw(gridViewRefined);
+    // draw(gridViewRefined);
   }
   /// Calculate circumference and compare to pi
   double circumference = 0.0;

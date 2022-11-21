@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   //  //  /// ALUGrid Example
   //  using Grid = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
   //  auto grid  =
-  //  Dune::GmshReader<Grid>::read("testFiles/unstructuredTrianglesfine.msh",
+  //  Dune::GmshReader<Grid>::read("auxiliaryFiles/unstructuredTrianglesfine.msh",
   //  false); grid->globalRefine(1);
   /// IGA Grid Example
   constexpr auto dimworld = 2;
@@ -131,7 +131,8 @@ int main(int argc, char **argv) {
   std::cout << gridView.size(0) << " elements" << std::endl;
   std::cout << basis.size() << " Dofs" << std::endl;
 
-  draw(gridView);
+  //  draw(gridView);
+
   auto localView = basis.localView();
   std::vector<Ikarus::NonLinearElasticityFE<decltype(basis)>> fes;
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {

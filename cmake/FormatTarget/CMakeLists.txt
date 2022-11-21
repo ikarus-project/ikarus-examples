@@ -21,15 +21,10 @@ if(ADD_CODESPELLTARGET)
         codespell
         -c
         -s
-        -I
-        codespellignore
         -S
         literature.bib
         --count
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/tests
-        ${CMAKE_SOURCE_DIR}/examples
-        ${CMAKE_SOURCE_DIR}/docs
         README.md
     )
     add_custom_target(

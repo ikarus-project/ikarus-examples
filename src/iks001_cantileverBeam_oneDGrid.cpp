@@ -45,60 +45,6 @@ using namespace Dune::Functions;
 using namespace Dune::Functions::BasisBuilder;
 using namespace Dune::Indices;
 
-void exampleTrussElement() {
-  const double L        = 1;
-  const double EA       = 1.0;
-  const int numElements = 10;
-  const int numGP       = 2;
-  Dune::OneDGrid grid(numElements, 0, L);
-  auto gridView = grid.leafGridView();
-  // draw(gridView);
-  using namespace Dune::Functions::BasisFactory;
-  auto basis     = makeBasis(gridView, lagrange<1>());
-  auto localView = basis.localView();
-
-  auto numDofs           = basis.size();
-  Eigen::MatrixXd K_Glob = Eigen::MatrixXd::Zero(numDofs, numDofs);
-
-  for (auto &ele : elements(gridView)) {
-    localView.bind(ele);
-    auto &fe = localView.tree().finiteElement();
-    Ikarus::LocalBasis localBasis(fe.localBasis());
-    const auto &rule = Dune::QuadratureRules<double, 1>::rule(ele.type(), numGP, Dune::QuadratureType::GaussLegendre);
-
-    Eigen::VectorXd dNdxi = Eigen::VectorXd::Zero(2);
-    Eigen::MatrixXd K     = Eigen::MatrixXd::Zero(2, 2);
-    Eigen::VectorXd B     = Eigen::VectorXd::Zero(2);
-
-    auto detJ = ele.geometry().integrationElement(0.0);
-    for (auto &gp : rule) {
-      localBasis.evaluateJacobian(gp.position(), dNdxi);
-      B = dNdxi / detJ;
-      K += EA * B * B.transpose() * detJ * gp.weight();
-    }
-
-    // Adding local stiffness the global stiffness
-    for (auto i = 0U; i < localView.size(); ++i)
-      for (auto j = 0U; j < localView.size(); ++j)
-        K_Glob(localView.index(i)[0], localView.index(j)[0]) += K(i, j);
-  }
-
-  // external force (1 one the right end)
-  Eigen::VectorXd F_ExtGlobRed = Eigen::VectorXd::Zero(numDofs - 1);
-  F_ExtGlobRed(numDofs - 2)    = 1.0;
-
-  // reduce stiffness matrix (fix left end)
-  const Eigen::MatrixXd K_GlobRed = K_Glob(Eigen::seq(1, Eigen::last), Eigen::seq(1, Eigen::last));
-
-  // solve the linear system
-  auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::d_LDLT);
-  linSolver.factorize(K_GlobRed);
-  Eigen::VectorXd D_GlobRed;
-  linSolver.solve(D_GlobRed, F_ExtGlobRed);
-
-  std::cout << "Displacement: " << D_GlobRed(Eigen::last) << "\n";
-}
-
 Eigen::MatrixXd TimoshenkoBeamStiffness(auto localView, auto gridElement, auto quadratureRule,
                                         const Eigen::Matrix2d &C) {
   using namespace Dune::Indices;
@@ -236,7 +182,9 @@ void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, doub
     l1_ana->color("red");
   }
 
-  f->show();
+  //  f->draw();
+  //  using namespace std::chrono_literals;
+  //  std::this_thread::sleep_for(5s);
 }
 
 void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrderPhi, const int numElements) {
