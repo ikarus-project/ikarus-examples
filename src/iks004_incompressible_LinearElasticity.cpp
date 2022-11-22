@@ -26,6 +26,7 @@
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;
@@ -147,25 +148,27 @@ int main(int argc, char **argv) {
 
   using namespace Dune::Functions::BasisFactory;
   /// Construct basis
-  auto basis
-      = makeBasis(gridView, composite(power<2>(lagrange<1>(), FlatInterleaved()), lagrange<0>(), FlatLexicographic()));
+  auto basis = Ikarus::makeSharedBasis(gridView, composite(power<2>(lagrange<1>(), FlatInterleaved()), lagrange<0>(), FlatLexicographic()));
 
   /// Create finite elements
   const double Emod = 2.1e1;
   const double nu   = 0.5;
-  std::vector<Solid<decltype(basis)>> fes;
+  std::vector<Solid<typename decltype(basis)::element_type>> fes;
   for (auto &ele : elements(gridView))
     fes.emplace_back(basis, ele, Emod, nu);
 
   /// Collect dirichlet nodes
-  std::vector<bool> dirichletFlags(basis.size(), false);
-  forEachBoundaryDOF(subspaceBasis(basis, _0), [&](auto &&localIndex, auto &&localView, auto &&intersection) {
-    if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)[0]] = true;
+  Ikarus::DirichletValues dirichletValues(basis);
+
+  dirichletValues.fixDOFs([](auto& basis_, auto& dirichFlags) {
+    Dune::Functions::forEachBoundaryDOF(subspaceBasis(basis_, _0), [&](auto& dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
+      if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true; });
   });
 
+
   /// Create assembler
-  auto sparseFlatAssembler = SparseFlatAssembler(basis, fes, dirichletFlags);
-  auto denseFlatAssembler  = DenseFlatAssembler(basis, fes, dirichletFlags);
+  auto sparseFlatAssembler = SparseFlatAssembler(fes, dirichletValues);
+  auto denseFlatAssembler  = DenseFlatAssembler(fes, dirichletValues);
 
   /// Create non-linear operator
   double lambda = 0;
