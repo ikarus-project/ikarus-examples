@@ -207,8 +207,8 @@ int main(int argc, char **argv) {
         const auto geo = localView.element().geometry();
         for (size_t i = 0; i < 4; ++i) {
           if ((geo.corner(i)[0] == req_pos[0]) and (geo.corner(i)[1] == req_pos[1])) {
-            const auto local_pos = geo.local(toFieldVector(req_pos));
-            uy_fe                = toEigenVector(localw(local_pos)).eval()[1];
+            const auto local_pos = geo.local(toDune(req_pos));
+            uy_fe                = toEigen(localw(local_pos)).eval()[1];
           }
         }
       }
