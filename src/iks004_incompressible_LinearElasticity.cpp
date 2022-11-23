@@ -109,10 +109,10 @@ private:
     Eigen::VectorXd Ndisp;
     Eigen::VectorXd Npressure;
     for (auto &&gp : rule) {
-      const auto J = toEigenMatrix(geo.jacobianTransposed(gp.position())).transpose().eval();
+      const auto J = toEigen(geo.jacobianTransposed(gp.position())).transpose().eval();
       localBasisDisp.evaluateFunctionAndJacobian(gp.position(), Ndisp, dNdisp);
       localBasisPressure.evaluateFunction(gp.position(), Npressure);
-      const Eigen::Vector<double, Traits::worlddim> X = toEigenVector(geo.global(gp.position()));
+      const Eigen::Vector<double, Traits::worlddim> X = toEigen(geo.global(gp.position()));
       Eigen::Vector<ScalarType, Traits::worlddim> x   = X;
       for (auto i = 0U; i < feDisp.size(); ++i)
         x += disp.col(i) * Ndisp[i];

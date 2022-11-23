@@ -70,8 +70,8 @@ private:
     const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
     auto &ele     = localView_.element();
-    const auto X1 = Ikarus::toEigenVector(ele.geometry().corner(0));
-    const auto X2 = Ikarus::toEigenVector(ele.geometry().corner(1));
+    const auto X1 = Ikarus::toEigen(ele.geometry().corner(0));
+    const auto X2 = Ikarus::toEigen(ele.geometry().corner(1));
 
     Eigen::Matrix<Scalar, Traits::worlddim, 2> u;
     u.setZero();

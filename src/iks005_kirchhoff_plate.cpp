@@ -112,7 +112,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
       localBasis.partial({1, 1}, gp.position(), dN_xieta);
       localBasis.partial({0, 2}, gp.position(), dN_etaeta);
 
-      const auto Jinv = Ikarus::toEigenMatrix(geometry_.jacobianInverseTransposed(gp.position())).transpose().eval();
+      const auto Jinv = Ikarus::toEigen(geometry_.jacobianInverseTransposed(gp.position())).transpose().eval();
 
       Eigen::VectorXd dN_xx(fe.size());
       Eigen::VectorXd dN_yy(fe.size());
@@ -144,8 +144,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
             localBasis.evaluateJacobian(gpInElement, dN_xi_eta);
             Eigen::VectorXd dN_x(fe.size());
             Eigen::VectorXd dN_y(fe.size());
-            const auto Jinv
-                = Ikarus::toEigenMatrix(geometry_.jacobianInverseTransposed(gpInElement)).transpose().eval();
+            const auto Jinv = Ikarus::toEigen(geometry_.jacobianInverseTransposed(gpInElement)).transpose().eval();
             for (auto i = 0U; i < fe.size(); ++i) {
               dN_x[i] = dN_xi_eta[i][0][0] * Jinv(0, 0);
               dN_y[i] = dN_xi_eta[i][0][1] * Jinv(1, 1);
