@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
       auto numberOfEASParameters = easSet(nep);
 
       using namespace Dune::Functions::BasisFactory;
-      auto basis = Ikarus::makeSharedBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
+      auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
 
       /// clamp left-hand side
       Ikarus::DirichletValues dirichletValues(basis);

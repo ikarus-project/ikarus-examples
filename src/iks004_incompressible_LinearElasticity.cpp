@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
 
   using namespace Dune::Functions::BasisFactory;
   /// Construct basis
-  auto basis = Ikarus::makeSharedBasis(
+  auto basis = Ikarus::makeConstSharedBasis(
       gridView, composite(power<2>(lagrange<1>(), FlatInterleaved()), lagrange<0>(), FlatLexicographic()));
 
   /// Create finite elements

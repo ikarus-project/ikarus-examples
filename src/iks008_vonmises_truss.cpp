@@ -96,7 +96,7 @@ int main() {
   // draw(gridView);
 
   /// Construct basis
-  auto basis = Ikarus::makeSharedBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeConstSharedBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
 
   /// Create finite elements
   const double EA = 100;

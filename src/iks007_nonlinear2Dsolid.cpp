@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   using namespace Dune::Functions::BasisFactory;
   //  auto basis = makeBasis(gridView, power<gridDim>(gridView.getPreBasis(),
   //  FlatInterleaved()));
-  auto basis = Ikarus::makeSharedBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
   std::cout << gridView.size(1) << " edges" << std::endl;
