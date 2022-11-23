@@ -96,6 +96,7 @@ int main() {
   // draw(gridView);
 
   /// Construct basis
+  using namespace Dune::Functions::BasisFactory;
   auto basis = Ikarus::makeConstSharedBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
 
   /// Create finite elements
@@ -109,7 +110,7 @@ int main() {
   dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
-  auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletFlags);
+  auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletValues);
 
   /// Create non-linear operator
   double lambda = 0;
@@ -161,7 +162,7 @@ int main() {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(*basis)>>(*basis, d, 2);
+  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("TestTruss");
   nr->subscribeAll(nonLinearSolverObserver);
