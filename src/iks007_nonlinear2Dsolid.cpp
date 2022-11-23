@@ -25,6 +25,7 @@
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/manifolds/realTuple.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/solver/nonLinearSolver/trustRegion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
@@ -107,17 +108,17 @@ int main(int argc, char **argv) {
   using namespace Dune::Functions::BasisFactory;
   //  auto basis = makeBasis(gridView, power<gridDim>(gridView.getPreBasis(),
   //  FlatInterleaved()));
-  auto basis = makeBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeSharedBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
   std::cout << gridView.size(1) << " edges" << std::endl;
   std::cout << gridView.size(0) << " elements" << std::endl;
-  std::cout << basis.size() << " Dofs" << std::endl;
+  std::cout << basis->size() << " Dofs" << std::endl;
 
   //  draw(gridView);
 
-  auto localView = basis.localView();
-  std::vector<Ikarus::NonLinearElasticityFE<decltype(basis)>> fes;
+  auto localView = basis->localView();
+  std::vector<Ikarus::NonLinearElasticityFE<typename decltype(basis)::element_type>> fes;
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
@@ -135,17 +136,15 @@ int main(int argc, char **argv) {
   };
 
   for (auto &element : elements(gridView))
-    fes.emplace_back(basis, element, 1000, 0.3, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
+    fes.emplace_back(*basis, element, 1000, 0.3, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
 
-  std::vector<bool> dirichletFlags(basis.size(), false);
+  Ikarus::DirichletValues dirichletValues(basis);
 
-  Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&localIndex, auto &&localView, auto &&intersection) {
-    if (std::abs(intersection.geometry().center()[0]) < 1e-8) {
-      dirichletFlags[localView.index(localIndex)[0]] = true;
-    }
+  dirichletValues.fixBoundaryDOFs([&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
+    if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
   });
 
-  auto sparseAssembler = SparseFlatAssembler(basis, fes, dirichletFlags);
+  auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   Eigen::VectorXd d;
   d.setZero(basis.size());

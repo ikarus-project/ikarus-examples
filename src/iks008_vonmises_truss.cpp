@@ -24,6 +24,7 @@
 #include <ikarus/finiteElements/feTraits.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
@@ -93,22 +94,21 @@ int main() {
   auto gridView = grid->leafGridView();
   // draw(gridView);
 
-  using namespace Dune::Functions::BasisFactory;
   /// Construct basis
-  auto basis = makeBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeSharedBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
 
   /// Create finite elements
   const double EA = 100;
-  std::vector<Truss<decltype(basis)>> fes;
+  std::vector<Truss<typename decltype(basis)::element_type>> fes;
   for (auto &ele : elements(gridView))
-    fes.emplace_back(basis, ele, EA);
+    fes.emplace_back(*basis, ele, EA);
 
   /// Collect dirichlet nodes
-  std::vector<bool> dirichletFlags(basis.size(), false);
-  Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&index) { dirichletFlags[index] = true; });
+  Ikarus::DirichletValues dirichletValues(basis);
+  dirichletValues.fixBoundaryDOFs([&](auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
-  auto denseFlatAssembler = DenseFlatAssembler(basis, fes, dirichletFlags);
+  auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletFlags);
 
   /// Create non-linear operator
   double lambda = 0;

@@ -22,6 +22,7 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/finiteElements/mechanics/enhancedAssumedStrains.hh>
 #include <ikarus/finiteElements/mechanics/linearElastic.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
@@ -73,15 +74,15 @@ int main(int argc, char **argv) {
       auto numberOfEASParameters = easSet(nep);
 
       using namespace Dune::Functions::BasisFactory;
-      auto basis = makeBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
+      auto basis = Ikarus::makeSharedBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
 
       /// clamp left-hand side
-      std::vector<bool> dirichletFlags(basis.size(), false);
-      forEachBoundaryDOF(basis, [&](auto &&localIndex, auto &&localView, auto &&intersection) {
-        if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)[0]] = true;
+      Ikarus::DirichletValues dirichletValues(basis);
+      dirichletValues.fixBoundaryDOFs([&](auto &&localIndex, auto &&localView, auto &&intersection) {
+        if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
       });
 
-      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(basis)>>> fes;
+      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(*basis)>>> fes;
 
       /// function for volume load- here: returns zero
       auto volumeLoad = [](auto &globalCoord, auto &lamb) {
@@ -122,11 +123,11 @@ int main(int argc, char **argv) {
 
       for (auto &element : elements(gridView)) {
         auto localView = basis.localView();
-        fes.emplace_back(basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
+        fes.emplace_back(*basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
         fes.back().setEASType(numberOfEASParameters);
       }
 
-      auto sparseAssembler = SparseFlatAssembler(basis, fes, dirichletFlags);
+      auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
       auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
         Ikarus::FErequirements req = FErequirementsBuilder()
