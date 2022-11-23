@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
         return sparseAssembler.getVector(req);
       };
 
-      Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.size());
+      Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis->size());
 
       auto startAssembly    = std::chrono::high_resolution_clock::now();
       auto nonLinOp         = Ikarus::NonLinearOperator(linearAlgebraFunctions(residualFunction, KFunction),
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
-                   durationAssembly.count(), numberOfEASParameters, basis.size());
+                   durationAssembly.count(), numberOfEASParameters, basis->size());
       ;
       timeVec.push_back(durationAssembly.count());
       const auto &K    = nonLinOp.derivative();
@@ -175,12 +175,12 @@ int main(int argc, char **argv) {
 
       /// Postprocess
       auto dispGlobalFunc
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis, D_Glob);
+          = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(*basis, D_Glob);
       Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
       vtkWriter.addVertexData(dispGlobalFunc,
                               Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
       vtkWriter.write("Cook_MembraneConvergence" + std::to_string(ref));
-      auto localView = basis.localView();
+      auto localView = basis->localView();
       auto localw    = localFunction(dispGlobalFunc);
       double uy_fe   = 0.0;
       Eigen::Vector2d req_pos;
@@ -197,13 +197,13 @@ int main(int argc, char **argv) {
           }
         }
       }
-      dofsVec.push_back(basis.size());
+      dofsVec.push_back(basis->size());
       dispVec.push_back(uy_fe);
 
       auto stop     = std::chrono::high_resolution_clock::now();
       auto duration = duration_cast<std::chrono::milliseconds>(stop - start);
       spdlog::info("The total execution took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
-                   duration.count(), numberOfEASParameters, basis.size());
+                   duration.count(), numberOfEASParameters, basis->size());
       grid->globalRefine(1);
     }
 

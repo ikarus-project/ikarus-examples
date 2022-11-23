@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
   auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   Eigen::VectorXd d;
-  d.setZero(basis.size());
+  d.setZero(basis->size());
   double lambda = 0.0;
 
   auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
 
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(basis)>>(basis, d, 2);
+  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(*basis)>>(*basis, d, 2);
   vtkWriter->setFileNamePrefix("Test2Dsolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   nr->subscribeAll(nonLinearSolverObserver);

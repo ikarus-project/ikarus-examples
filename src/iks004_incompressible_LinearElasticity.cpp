@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
   /// Create non-linear operator
   double lambda = 0;
   Eigen::VectorXd d;
-  d.setZero(basis.size());
+  d.setZero(basis->size());
 
   auto fintFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
@@ -206,8 +206,8 @@ int main(int argc, char **argv) {
 
   /// Postprocess
   auto disp
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(subspaceBasis(basis, _0), d);
-  auto pressure = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis, _1), d);
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(subspaceBasis(*basis, _0), d);
+  auto pressure = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(subspaceBasis(*basis, _1), d);
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::nonconforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
   vtkWriter.addVertexData(pressure, Dune::VTK::FieldInfo("pressure", Dune::VTK::FieldInfo::Type::scalar, 1));

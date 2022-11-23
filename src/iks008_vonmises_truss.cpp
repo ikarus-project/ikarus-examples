@@ -114,7 +114,7 @@ int main() {
   /// Create non-linear operator
   double lambda = 0;
   Eigen::VectorXd d;
-  d.setZero(basis.size());
+  d.setZero(basis->size());
 
   auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
@@ -161,7 +161,7 @@ int main() {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(basis)>>(basis, d, 2);
+  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(*basis)>>(*basis, d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("TestTruss");
   nr->subscribeAll(nonLinearSolverObserver);
