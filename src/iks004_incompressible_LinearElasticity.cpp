@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
   /// Construct grid
   Dune::MPIHelper::instance(argc, argv);
   using namespace Ikarus;
+  using namespace Dune::Indices;
   constexpr int gridDim = 2;
 
   using Grid        = Dune::YaspGrid<gridDim>;
@@ -162,9 +163,9 @@ int main(int argc, char **argv) {
   /// Collect dirichlet nodes
   Ikarus::DirichletValues dirichletValues(basis);
 
-  dirichletValues.fixDOFs([](auto &basis_, auto &dirichFlags) {
+  dirichletValues.fixDOFs([](auto &basis_, auto &dirichletFlags) {
     Dune::Functions::forEachBoundaryDOF(
-        subspaceBasis(basis_, _0), [&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
+        subspaceBasis(basis_, _0), [&](auto &&localIndex, auto &&localView, auto &&intersection) {
           if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
         });
   });

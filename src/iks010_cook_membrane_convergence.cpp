@@ -79,11 +79,11 @@ int main(int argc, char **argv) {
 
       /// clamp left-hand side
       Ikarus::DirichletValues dirichletValues(basis);
-      dirichletValues.fixBoundaryDOFs([&](auto &&localIndex, auto &&localView, auto &&intersection) {
+      dirichletValues.fixBoundaryDOFs([&](auto &dirichletFlags,auto &&localIndex, auto &&localView, auto &&intersection) {
         if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
       });
 
-      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(*basis)>>> fes;
+      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<typename decltype(basis)::element_type>>> fes;
 
       /// function for volume load- here: returns zero
       auto volumeLoad = [](auto &globalCoord, auto &lamb) {
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
       for (auto &element : elements(gridView)) {
-        auto localView = basis.localView();
+        auto localView = basis->localView();
         fes.emplace_back(*basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
         fes.back().setEASType(numberOfEASParameters);
       }

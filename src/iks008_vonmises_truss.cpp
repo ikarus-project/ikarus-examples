@@ -106,7 +106,7 @@ int main() {
 
   /// Collect dirichlet nodes
   Ikarus::DirichletValues dirichletValues(basis);
-  dirichletValues.fixBoundaryDOFs([&](auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
+  dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
   auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletFlags);
