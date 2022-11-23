@@ -32,6 +32,7 @@
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/loadControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
+#include <ikarus/utils/duneUtilities.hh>
 
 template <typename Basis>
 struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, Basis> {

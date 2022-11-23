@@ -27,6 +27,7 @@
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
+#include <ikarus/utils/duneUtilities.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;

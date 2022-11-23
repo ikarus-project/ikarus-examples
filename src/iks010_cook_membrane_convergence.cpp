@@ -28,6 +28,7 @@
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
+#include <ikarus/utils/duneUtilities.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;

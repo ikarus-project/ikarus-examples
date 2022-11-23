@@ -31,6 +31,7 @@
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
+#include <ikarus/utils/duneUtilities.hh>
 
 int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
