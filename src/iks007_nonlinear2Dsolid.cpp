@@ -22,12 +22,14 @@
 #include <ikarus/controlRoutines/loadControl.hh>
 #include <ikarus/finiteElements/feRequirements.hh>
 #include <ikarus/finiteElements/mechanics/nonLinearElasticityFE.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/manifolds/realTuple.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/solver/nonLinearSolver/trustRegion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
@@ -107,17 +109,17 @@ int main(int argc, char **argv) {
   using namespace Dune::Functions::BasisFactory;
   //  auto basis = makeBasis(gridView, power<gridDim>(gridView.getPreBasis(),
   //  FlatInterleaved()));
-  auto basis = makeBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
   std::cout << gridView.size(1) << " edges" << std::endl;
   std::cout << gridView.size(0) << " elements" << std::endl;
-  std::cout << basis.size() << " Dofs" << std::endl;
+  std::cout << basis->size() << " Dofs" << std::endl;
 
   //  draw(gridView);
 
-  auto localView = basis.localView();
-  std::vector<Ikarus::NonLinearElasticityFE<decltype(basis)>> fes;
+  auto localView = basis->localView();
+  std::vector<Ikarus::NonLinearElasticityFE<typename decltype(basis)::element_type>> fes;
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
@@ -135,20 +137,18 @@ int main(int argc, char **argv) {
   };
 
   for (auto &element : elements(gridView))
-    fes.emplace_back(basis, element, 1000, 0.3, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
+    fes.emplace_back(*basis, element, 1000, 0.3, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
 
-  std::vector<bool> dirichletFlags(basis.size(), false);
+  Ikarus::DirichletValues dirichletValues(basis);
 
-  Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&localIndex, auto &&localView, auto &&intersection) {
-    if (std::abs(intersection.geometry().center()[0]) < 1e-8) {
-      dirichletFlags[localView.index(localIndex)[0]] = true;
-    }
+  dirichletValues.fixBoundaryDOFs([&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
+    if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
   });
 
-  auto sparseAssembler = SparseFlatAssembler(basis, fes, dirichletFlags);
+  auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   Eigen::VectorXd d;
-  d.setZero(basis.size());
+  d.setZero(basis->size());
   double lambda = 0.0;
 
   auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
@@ -195,7 +195,8 @@ int main(int argc, char **argv) {
 
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(basis)>>(basis, d, 2);
+  auto vtkWriter
+      = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
   vtkWriter->setFileNamePrefix("Test2Dsolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   nr->subscribeAll(nonLinearSolverObserver);

@@ -21,10 +21,12 @@
 
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/localFunctions/impl/standardLocalFunction.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
 
 using namespace Ikarus;
@@ -131,6 +133,7 @@ int main(int argc, char **argv) {
   /// Construct grid
   Dune::MPIHelper::instance(argc, argv);
   using namespace Ikarus;
+  using namespace Dune::Indices;
   constexpr int gridDim = 2;
 
   using Grid        = Dune::YaspGrid<gridDim>;
@@ -147,30 +150,35 @@ int main(int argc, char **argv) {
 
   using namespace Dune::Functions::BasisFactory;
   /// Construct basis
-  auto basis
-      = makeBasis(gridView, composite(power<2>(lagrange<1>(), FlatInterleaved()), lagrange<0>(), FlatLexicographic()));
+  auto basis = Ikarus::makeConstSharedBasis(
+      gridView, composite(power<2>(lagrange<1>(), FlatInterleaved()), lagrange<0>(), FlatLexicographic()));
 
   /// Create finite elements
   const double Emod = 2.1e1;
   const double nu   = 0.5;
-  std::vector<Solid<decltype(basis)>> fes;
+  std::vector<Solid<typename decltype(basis)::element_type>> fes;
   for (auto &ele : elements(gridView))
-    fes.emplace_back(basis, ele, Emod, nu);
+    fes.emplace_back(*basis, ele, Emod, nu);
 
   /// Collect dirichlet nodes
-  std::vector<bool> dirichletFlags(basis.size(), false);
-  forEachBoundaryDOF(subspaceBasis(basis, _0), [&](auto &&localIndex, auto &&localView, auto &&intersection) {
-    if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)[0]] = true;
+  Ikarus::DirichletValues dirichletValues(basis);
+
+  dirichletValues.fixDOFs([](auto &basis_, auto &dirichletFlags) {
+    Dune::Functions::forEachBoundaryDOF(subspaceBasis(basis_, _0),
+                                        [&](auto &&localIndex, auto &&localView, auto &&intersection) {
+                                          if (std::abs(intersection.geometry().center()[1]) < 1e-8)
+                                            dirichletFlags[localView.index(localIndex)] = true;
+                                        });
   });
 
   /// Create assembler
-  auto sparseFlatAssembler = SparseFlatAssembler(basis, fes, dirichletFlags);
-  auto denseFlatAssembler  = DenseFlatAssembler(basis, fes, dirichletFlags);
+  auto sparseFlatAssembler = SparseFlatAssembler(fes, dirichletValues);
+  auto denseFlatAssembler  = DenseFlatAssembler(fes, dirichletValues);
 
   /// Create non-linear operator
   double lambda = 0;
   Eigen::VectorXd d;
-  d.setZero(basis.size());
+  d.setZero(basis->size());
 
   auto fintFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
@@ -200,8 +208,8 @@ int main(int argc, char **argv) {
 
   /// Postprocess
   auto disp
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(subspaceBasis(basis, _0), d);
-  auto pressure = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis, _1), d);
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(subspaceBasis(*basis, _0), d);
+  auto pressure = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(subspaceBasis(*basis, _1), d);
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::nonconforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
   vtkWriter.addVertexData(pressure, Dune::VTK::FieldInfo("pressure", Dune::VTK::FieldInfo::Type::scalar, 1));

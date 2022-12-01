@@ -23,10 +23,12 @@
 #include <ikarus/finiteElements/mechanics/enhancedAssumedStrains.hh>
 #include <ikarus/finiteElements/mechanics/linearElastic.hh>
 #include <ikarus/finiteElements/physicsHelper.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 
 using namespace Ikarus;
@@ -61,21 +63,21 @@ int main(int argc, char** argv) {
   auto gridView = grid->leafGridView();
 
   using namespace Dune::Functions::BasisFactory;
-  auto basis = makeBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
+  auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
 
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
   std::cout << gridView.size(1) << " edges" << std::endl;
   std::cout << gridView.size(0) << " elements" << std::endl;
-  std::cout << basis.size() << " Dofs" << std::endl;
+  std::cout << basis->size() << " Dofs" << std::endl;
 
   /// clamp left-hand side
-  std::vector<bool> dirichletFlags(basis.size(), false);
-  forEachBoundaryDOF(basis, [&](auto&& localIndex, auto&& localView, auto&& intersection) {
-    if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)[0]] = true;
+  Ikarus::DirichletValues dirichletValues(basis);
+  dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto&& localIndex, auto&& localView, auto&& intersection) {
+    if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
   });
 
-  std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(basis)>>> fes;
+  std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<typename decltype(basis)::element_type>>> fes;
 
   /// function for volume load- here: returns zero
   auto volumeLoad = [](auto& globalCoord, auto& lamb) {
@@ -115,12 +117,12 @@ int main(int argc, char** argv) {
   BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
   for (auto& element : elements(gridView)) {
-    auto localView = basis.localView();
-    fes.emplace_back(basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
+    auto localView = basis->localView();
+    fes.emplace_back(*basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
     fes.back().setEASType(numberOfEASParameters);
   }
 
-  auto sparseAssembler = SparseFlatAssembler(basis, fes, dirichletFlags);
+  auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
     Ikarus::FErequirements req = FErequirementsBuilder()
@@ -149,7 +151,7 @@ int main(int argc, char** argv) {
     return sparseAssembler.getScalar(req);
   };
 
-  Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.size());
+  Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis->size());
 
   auto startAssembly = std::chrono::high_resolution_clock::now();
   auto nonLinOp
@@ -171,7 +173,7 @@ int main(int argc, char** argv) {
   spdlog::info("The solver took {} milliseconds", durationSolver.count());
 
   /// Postprocess
-  auto disp = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis, D_Glob);
+  auto disp = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(*basis, D_Glob);
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
   vtkWriter.write("Cook_Membrane");

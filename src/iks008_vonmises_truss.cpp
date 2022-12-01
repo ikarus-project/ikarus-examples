@@ -22,10 +22,12 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/powerBasisFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/genericControlObserver.hh>
@@ -93,27 +95,28 @@ int main() {
   auto gridView = grid->leafGridView();
   // draw(gridView);
 
-  using namespace Dune::Functions::BasisFactory;
   /// Construct basis
-  auto basis = makeBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
+  using namespace Dune::Functions::BasisFactory;
+  auto basis = Ikarus::makeConstSharedBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
 
   /// Create finite elements
   const double EA = 100;
-  std::vector<Truss<decltype(basis)>> fes;
+  std::vector<Truss<typename decltype(basis)::element_type>> fes;
   for (auto &ele : elements(gridView))
-    fes.emplace_back(basis, ele, EA);
+    fes.emplace_back(*basis, ele, EA);
 
   /// Collect dirichlet nodes
-  std::vector<bool> dirichletFlags(basis.size(), false);
-  Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&index) { dirichletFlags[index] = true; });
+  Ikarus::DirichletValues dirichletValues(basis);
+  dirichletValues.fixBoundaryDOFs(
+      [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
-  auto denseFlatAssembler = DenseFlatAssembler(basis, fes, dirichletFlags);
+  auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletValues);
 
   /// Create non-linear operator
   double lambda = 0;
   Eigen::VectorXd d;
-  d.setZero(basis.size());
+  d.setZero(basis->size());
 
   auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
@@ -160,7 +163,8 @@ int main() {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<decltype(basis)>>(basis, d, 2);
+  auto vtkWriter
+      = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("TestTruss");
   nr->subscribeAll(nonLinearSolverObserver);

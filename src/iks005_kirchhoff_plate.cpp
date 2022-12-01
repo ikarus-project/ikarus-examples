@@ -22,12 +22,14 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/scalarFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/concepts.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/loadControlObserver.hh>
@@ -185,26 +187,27 @@ int main() {
     //    draw(gridView);
     using namespace Dune::Functions::BasisFactory;
     /// Create nurbs basis with extracted preBase from grid
-    auto basis = makeBasis(gridView, gridView.getPreBasis());
+    auto basis = Ikarus::makeConstSharedBasis(gridView, gridView.getPreBasis());
     /// Fix complete boundary (simply supported plate)
-    std::vector<bool> dirichletFlags(basis.size(), false);
-    Dune::Functions::forEachBoundaryDOF(basis, [&](auto &&index) { dirichletFlags[index] = true; });
+    Ikarus::DirichletValues dirichletValues(basis);
+    dirichletValues.fixBoundaryDOFs(
+        [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
     /// Create finite elements
-    auto localView         = basis.localView();
+    auto localView         = basis->localView();
     const double Emod      = 2.1e8;
     const double nu        = 0.3;
     const double thickness = 0.1;
-    std::vector<KirchhoffPlate<decltype(basis)>> fes;
+    std::vector<KirchhoffPlate<typename decltype(basis)::element_type>> fes;
     for (auto &ele : elements(gridView))
-      fes.emplace_back(basis, ele, Emod, nu, thickness);
+      fes.emplace_back(*basis, ele, Emod, nu, thickness);
 
     /// Create assembler
-    auto denseAssembler = DenseFlatAssembler(basis, fes, dirichletFlags);
+    auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
 
     /// Create non-linear operator with potential energy
     Eigen::VectorXd w;
-    w.setZero(basis.size());
+    w.setZero(basis->size());
 
     const double totalLoad = 2000;
 
@@ -233,7 +236,7 @@ int main() {
     w -= solver.solve(R);
 
     // Output solution to vtk
-    auto wGlobalFunc = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(basis, w);
+    auto wGlobalFunc = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(*basis, w);
     Dune::SubsamplingVTKWriter vtkWriter(gridView, Dune::refinementLevels(2));
     vtkWriter.addVertexData(wGlobalFunc, Dune::VTK::FieldInfo("w", Dune::VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("Test_KPlate");
@@ -260,7 +263,7 @@ int main() {
     // clamped sol http://faculty.ce.berkeley.edu/rlt/reports/clamp.pdf
     const double wCenterClamped = 1.265319087 / (D / (totalLoad * Dune::power(Lx, 4)) * 1000.0);
     //    std::cout << wCenterClamped << std::endl;
-    auto wGlobalFunction = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(basis, w);
+    auto wGlobalFunction = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(*basis, w);
     auto wGlobalAnalyticFunction = Dune::Functions::makeAnalyticGridViewFunction(wAna, gridView);
     auto localw                  = localFunction(wGlobalFunction);
     auto localwAna               = localFunction(wGlobalAnalyticFunction);
@@ -284,8 +287,8 @@ int main() {
     }
 
     l2_error = std::sqrt(l2_error);
-    std::cout << "l2_error: " << l2_error << " Dofs:: " << basis.size() << std::endl;
-    dofsVec.push_back(basis.size());
+    std::cout << "l2_error: " << l2_error << " Dofs:: " << basis->size() << std::endl;
+    dofsVec.push_back(basis->size());
     l2Evcector.push_back(l2_error);
     grid.globalRefine(1);
   }
