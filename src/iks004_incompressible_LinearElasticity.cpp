@@ -26,8 +26,8 @@
 #include <ikarus/localFunctions/impl/standardLocalFunction.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/eigenDuneTransformations.hh>
 #include <ikarus/utils/duneUtilities.hh>
+#include <ikarus/utils/eigenDuneTransformations.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;
@@ -164,10 +164,11 @@ int main(int argc, char **argv) {
   Ikarus::DirichletValues dirichletValues(basis);
 
   dirichletValues.fixDOFs([](auto &basis_, auto &dirichletFlags) {
-    Dune::Functions::forEachBoundaryDOF(
-        subspaceBasis(basis_, _0), [&](auto &&localIndex, auto &&localView, auto &&intersection) {
-          if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
-        });
+    Dune::Functions::forEachBoundaryDOF(subspaceBasis(basis_, _0),
+                                        [&](auto &&localIndex, auto &&localView, auto &&intersection) {
+                                          if (std::abs(intersection.geometry().center()[1]) < 1e-8)
+                                            dirichletFlags[localView.index(localIndex)] = true;
+                                        });
   });
 
   /// Create assembler

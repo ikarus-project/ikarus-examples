@@ -23,13 +23,13 @@
 #include <ikarus/finiteElements/mechanics/enhancedAssumedStrains.hh>
 #include <ikarus/finiteElements/mechanics/linearElastic.hh>
 #include <ikarus/finiteElements/physicsHelper.hh>
-#include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
+#include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/duneUtilities.hh>
+#include <ikarus/utils/observer/controlVTKWriter.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;
@@ -74,8 +74,8 @@ int main(int argc, char** argv) {
   /// clamp left-hand side
   Ikarus::DirichletValues dirichletValues(basis);
   dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto&& localIndex, auto&& localView, auto&& intersection) {
-    if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true; });
-
+    if (std::abs(intersection.geometry().center()[0]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
+  });
 
   std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<typename decltype(basis)::element_type>>> fes;
 
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
     fes.back().setEASType(numberOfEASParameters);
   }
 
-  auto sparseAssembler = SparseFlatAssembler( fes, dirichletValues);
+  auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
     Ikarus::FErequirements req = FErequirementsBuilder()

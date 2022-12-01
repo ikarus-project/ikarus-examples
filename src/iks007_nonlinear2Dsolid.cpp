@@ -22,16 +22,16 @@
 #include <ikarus/controlRoutines/loadControl.hh>
 #include <ikarus/finiteElements/feRequirements.hh>
 #include <ikarus/finiteElements/mechanics/nonLinearElasticityFE.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/manifolds/realTuple.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
-#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/solver/nonLinearSolver/trustRegion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
-#include <ikarus/utils/duneUtilities.hh>
 
 int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
@@ -195,7 +195,8 @@ int main(int argc, char **argv) {
 
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
+  auto vtkWriter
+      = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
   vtkWriter->setFileNamePrefix("Test2Dsolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   nr->subscribeAll(nonLinearSolverObserver);

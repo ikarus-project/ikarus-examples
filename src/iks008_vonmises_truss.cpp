@@ -22,16 +22,16 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/powerBasisFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
-#include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/genericControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
-#include <ikarus/utils/duneUtilities.hh>
 
 using namespace Ikarus;
 template <typename Basis>
@@ -107,7 +107,8 @@ int main() {
 
   /// Collect dirichlet nodes
   Ikarus::DirichletValues dirichletValues(basis);
-  dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
+  dirichletValues.fixBoundaryDOFs(
+      [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
   auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletValues);
@@ -162,7 +163,8 @@ int main() {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
+  auto vtkWriter
+      = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("TestTruss");
   nr->subscribeAll(nonLinearSolverObserver);

@@ -22,18 +22,18 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/scalarFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
-#include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
+#include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/concepts.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/loadControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
-#include <ikarus/utils/duneUtilities.hh>
 
 template <typename Basis>
 struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, Basis> {
@@ -190,8 +190,8 @@ int main() {
     auto basis = Ikarus::makeConstSharedBasis(gridView, gridView.getPreBasis());
     /// Fix complete boundary (simply supported plate)
     Ikarus::DirichletValues dirichletValues(basis);
-    dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
-
+    dirichletValues.fixBoundaryDOFs(
+        [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
     /// Create finite elements
     auto localView         = basis->localView();
@@ -203,7 +203,7 @@ int main() {
       fes.emplace_back(*basis, ele, Emod, nu, thickness);
 
     /// Create assembler
-    auto denseAssembler = DenseFlatAssembler( fes, dirichletValues);
+    auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
 
     /// Create non-linear operator with potential energy
     Eigen::VectorXd w;
