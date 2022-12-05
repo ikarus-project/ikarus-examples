@@ -28,13 +28,10 @@ struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
 int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
 
-  /// Create grid from 6 triangles align in unit disc
+  /// Create a grid from 6 triangles align in unit disc
   using namespace Dune;
   constexpr int gridDim = 2;
   Dune::GridFactory<Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>> gridFactory;
-  //  std::array<FieldVector<double, 2>, 4> corners0 = {{{-sqrt(2) / 2, -sqrt(2)
-  //  / 2}, {sqrt(2) / 2, -sqrt(2) / 2}, {sqrt(2) / 2, sqrt(2) / 2}, {-sqrt(2) /
-  //  2, sqrt(2) / 2}}};
   Eigen::Vector2d v(1, 0);
   std::array<FieldVector<double, 2>, 6> corners0;
   Eigen::Rotation2D<double> R;
@@ -73,22 +70,9 @@ int main(int argc, char **argv) {
   auto gridView = grid->leafGridView();
   // draw(gridView);
 
-  double area1 = 0.0;
-  for (const auto &element : elements(gridView)) {
-    area1 += element.geometry().volume();
-  }
-
-  auto f       = [](auto &&global) { return sqrt(global[0] * global[0] + global[1] * global[1]); };
-  double area2 = 0.0;
-  for (auto &element : elements(gridView)) {
-    const auto &rule = Dune::QuadratureRules<double, 2>::rule(element.type(), 1, Dune::QuadratureType::GaussLegendre);
-    for (auto &gp : rule)
-      area2 += element.geometry().integrationElement(gp.position()) * gp.weight();
-  }
-
-  std::cout << "Area2 " << area2 << " " << std::numbers::pi << std::endl;
+  double area = 0.0;
   for (int i = 0; i < 10; ++i) {
-    area1 = 0.0;
+    area = 0.0;
     /// Refine grid entities if they live at the boundary
     //    grid->globalRefine(1);
     for (const auto &ele : elements(grid->leafGridView())) {
@@ -103,9 +87,9 @@ int main(int argc, char **argv) {
     std::cout << gridViewRefined.size(0) << " elements" << std::endl;
 
     for (auto &element : elements(gridViewRefined))
-      area1 += element.geometry().volume();
+      area += element.geometry().volume();
 
-    std::cout << "area1 " << area1 << " " << std::numbers::pi << std::endl;
+    std::cout << area << " " << std::numbers::pi << std::endl;
     // draw(gridViewRefined);
   }
   /// Calculate circumference and compare to pi

@@ -91,8 +91,6 @@ int main(int argc, char **argv) {
       auto volumeLoad = [](auto &globalCoord, auto &lamb) {
         Eigen::Vector2d fext;
         fext.setZero();
-        fext[1] = 2 * lamb * 0;
-        fext[0] = lamb * 0;
         return fext;
       };
 
@@ -181,7 +179,7 @@ int main(int argc, char **argv) {
       Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
       vtkWriter.addVertexData(dispGlobalFunc,
                               Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
-      vtkWriter.write("Cook_MembraneConvergence" + std::to_string(ref));
+      vtkWriter.write("iks010_cooksMembraneConvergenceStudy" + std::to_string(ref));
       auto localView = basis->localView();
       auto localw    = localFunction(dispGlobalFunc);
       double uy_fe   = 0.0;

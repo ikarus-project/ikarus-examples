@@ -21,6 +21,7 @@ void newtonRaphsonVeryBasicExample() {
   auto dfvLambda = [&](auto &&x) { return df(x); };
   Ikarus::NonLinearOperator nonLinOp(Ikarus::linearAlgebraFunctions(fvLambda, dfvLambda), Ikarus::parameter(x));
 
+  /// Standard implementation
   int iterCount = 1;
   while (abs(nonLinOp.value()) > eps and iterCount <= maxIter) {
     x -= nonLinOp.value() / nonLinOp.derivative();
@@ -31,12 +32,7 @@ void newtonRaphsonVeryBasicExample() {
     std::cout << "nonlinearOperator, x: " << nonLinOp.firstParameter() << "\n";
   }
 
-  for (int i = 0; i < maxIter; ++i) {
-    x -= nonLinOp.value() / nonLinOp.derivative();
-    nonLinOp.updateAll();
-    if (std::abs(x) < eps) break;
-  }
-
+  /// Implementation with Ikarus
   Ikarus::NewtonRaphson nr(nonLinOp);
   nr.setup({eps, maxIter});
   const auto solverInfo = nr.solve(x);
@@ -78,11 +74,14 @@ void newtonRaphsonBasicExampleWithLogger() {
   // nonLinearSolverObserver); nr.subscribeAll(nonLinearSolverObserver);
 
   const auto solverInfo = nr.solve(x);
-
-  std::cout << "solution: " << x << "\n";
+  if (solverInfo.success)
+    std::cout << "solution: " << x << "\n";
+  else
+    std::cout << "The Newton-Raphson procedure failed to converge" << std::endl;
 }
 
 int main() {
   newtonRaphsonVeryBasicExample();
+  std::cout << "\nWith Logger\n\n";
   newtonRaphsonBasicExampleWithLogger();
 }

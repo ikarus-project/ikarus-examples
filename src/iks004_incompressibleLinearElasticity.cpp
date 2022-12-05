@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
   Eigen::VectorXd d;
   d.setZero(basis->size());
 
-  auto fintFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
+  auto fextFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
     Ikarus::FErequirements req = FErequirementsBuilder()
                                      .insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
                                      .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
   };
 
   auto K = KFunction(1.0, d);
-  auto R = fintFunction(1.0, d);
+  auto R = fextFunction(1.0, d);
   Eigen::SparseLU<decltype(K)> ld;
   ld.compute(K);
   if (ld.info() != Eigen::Success) assert(false && "Failed Compute");
@@ -213,6 +213,5 @@ int main(int argc, char **argv) {
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::nonconforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
   vtkWriter.addVertexData(pressure, Dune::VTK::FieldInfo("pressure", Dune::VTK::FieldInfo::Type::scalar, 1));
-
-  vtkWriter.write("TestIncompressible");
+  vtkWriter.write("iks004_incompressibleLinearElasticity");
 }
