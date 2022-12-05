@@ -12,7 +12,7 @@ DEPENDENCIES=@REQUIRES@
 Name: @PACKAGE_NAME@
 Version: @VERSION@
 Description: ikarus-examples module
-URL: https://ikarusrepo.github.io/
+URL: https://ikarus-project.github.io/
 Requires: dune-common dune-geometry dune-iga dune-uggrid dune-grid dune-localfunctions dune-typetree dune-istl dune-functions
 Libs: -L${libdir}
 Cflags: -I${includedir}
