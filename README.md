@@ -21,8 +21,8 @@ The examples can be executed using a software like Clion or directly from a comm
 
 ```sh
 docker container run -it --entrypoint /bin/bash  rath3t/ikarus:latest 
-git clone https://github.com/IkarusRepo/IkarusExamples.git &&
-cd IkarusExamples &&
+git clone https://github.com/ikarus-project/ikarus-examples.git &&
+cd ikarus-examples &&
 mkdir build &&
 cd build &&
 cmake ../ -DCMAKE_BUILD_TYPE=Release &&
