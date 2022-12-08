@@ -52,7 +52,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
         nu{p_nu},
         thickness{p_thickness} {
     localView_.bind(element);
-    geometry_ = localView_.element().geometry();
+    geometry_.emplace(localView_.element().geometry());
   }
 
   static Eigen::Matrix<double, 3, 3> constitutiveMatrix(double Emod, double p_nu, double p_thickness) {
@@ -69,7 +69,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
 
   template <class Scalar>
   [[nodiscard]] Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
-    const auto &wGlobal = par.getSolution(Ikarus::FESolutions::displacement);
+    const auto &wGlobal = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda  = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D        = constitutiveMatrix(Emodul, nu, thickness);
     Scalar energy       = 0.0;
@@ -97,24 +97,23 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
       localBasis.partial({1, 1}, gp.position(), dN_xieta);
       localBasis.partial({0, 2}, gp.position(), dN_etaeta);
 
-      const auto Jinv = Ikarus::toEigen(geometry_.jacobianInverseTransposed(gp.position())).transpose().eval();
+      const auto Jinv = Ikarus::toEigen(geometry_->jacobianInverseTransposed(gp.position())).transpose().eval();
 
       Eigen::VectorXd dN_xx(fe.size());
       Eigen::VectorXd dN_yy(fe.size());
       Eigen::VectorXd dN_xy(fe.size());
       using Dune::power;
+      // The following derivative transformation assumes a non-distorted grid, otherwise there would be non-linear terms
       for (auto i = 0U; i < fe.size(); ++i) {
         dN_xx[i] = dN_xixi[i] * power(Jinv(0, 0), 2);
         dN_yy[i] = dN_etaeta[i] * power(Jinv(1, 1), 2);
         dN_xy[i] = dN_xieta[i] * Jinv(0, 0) * Jinv(1, 1);
       }
       Eigen::Vector<Scalar, 3> kappa;
-      kappa(0) = dN_xx.dot(wNodal);
-      kappa(1) = dN_yy.dot(wNodal);
-      kappa(2) = 2 * dN_xy.dot(wNodal);
+      kappa << dN_xx.dot(wNodal), dN_yy.dot(wNodal), 2 * dN_xy.dot(wNodal);
       Scalar w = N.dot(wNodal);
 
-      energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry_.integrationElement(gp.position()) * gp.weight();
+      energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry_->integrationElement(gp.position()) * gp.weight();
     }
 
     /// Clamp boundary using penalty method
@@ -129,7 +128,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
             localBasis.evaluateJacobian(gpInElement, dN_xi_eta);
             Eigen::VectorXd dN_x(fe.size());
             Eigen::VectorXd dN_y(fe.size());
-            const auto Jinv = Ikarus::toEigen(geometry_.jacobianInverseTransposed(gpInElement)).transpose().eval();
+            const auto Jinv = Ikarus::toEigen(geometry_->jacobianInverseTransposed(gpInElement)).transpose().eval();
             for (auto i = 0U; i < fe.size(); ++i) {
               dN_x[i] = dN_xi_eta[i][0][0] * Jinv(0, 0);
               dN_y[i] = dN_xi_eta[i][0][1] * Jinv(1, 1);
@@ -146,7 +145,11 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
 
  private:
   LocalView localView_;
-  typename LocalView::Element::Geometry geometry_;
+
+  /// Dune::Geometry<...> is not copy assignable, see https://gitlab.dune-project.org/core/dune-grid/-/issues/140,
+  /// Thus, we wrap it inside a std::optional
+  std::optional<typename LocalView::Element::Geometry> geometry_;
+
   double Emodul;
   double nu;
   double thickness;
@@ -187,7 +190,7 @@ int main() {
     //    draw(gridView);
     using namespace Dune::Functions::BasisFactory;
     /// Create nurbs basis with extracted preBase from grid
-    auto basis = Ikarus::makeConstSharedBasis(gridView, gridView.getPreBasis());
+    auto basis = Ikarus::makeConstSharedBasis(gridView, gridView.impl().getPreBasis());
     /// Fix complete boundary (simply supported plate)
     Ikarus::DirichletValues dirichletValues(basis);
     dirichletValues.fixBoundaryDOFs(
@@ -211,21 +214,17 @@ int main() {
 
     const double totalLoad = 2000;
 
+    auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
     auto kFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
-      Ikarus::FErequirements req = FErequirementsBuilder()
-                                       .insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-                                       .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                       .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                       .build();
+      req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
+          .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
       return denseAssembler.getMatrix(req);
     };
 
     auto rFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
-      Ikarus::FErequirements req = FErequirementsBuilder()
-                                       .insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-                                       .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                       .addAffordance(Ikarus::VectorAffordances::forces)
-                                       .build();
+      req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
+          .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
       return denseAssembler.getVector(req);
     };
 
@@ -239,7 +238,7 @@ int main() {
     auto wGlobalFunc = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(*basis, w);
     Dune::SubsamplingVTKWriter vtkWriter(gridView, Dune::refinementLevels(2));
     vtkWriter.addVertexData(wGlobalFunc, Dune::VTK::FieldInfo("w", Dune::VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("Test_KPlate");
+    vtkWriter.write("iks005_kirchhoffPlate");
 
     /// Create analytical solution function for the simply supported case
     const double D = Emod * Dune::power(thickness, 3) / (12 * (1 - Dune::power(nu, 2)));

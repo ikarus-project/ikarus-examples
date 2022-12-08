@@ -64,7 +64,7 @@ struct Solid : Ikarus::AutoDiffFE<Solid<Basis>, Basis> {
   template <class ScalarType>
   [[nodiscard]] ScalarType calculateScalarImpl(const FERequirementType &par,
                                                const Eigen::VectorX<ScalarType> &dx) const {
-    const auto &d      = par.getSolution(Ikarus::FESolutions::displacement);
+    const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(Ikarus::FEParameter::loadfactor);
     Eigen::VectorX<ScalarType> localDisp(localView_.size());
     localDisp.setZero();
@@ -180,25 +180,21 @@ int main(int argc, char **argv) {
   Eigen::VectorXd d;
   d.setZero(basis->size());
 
-  auto fintFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
+  auto fextFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return denseFlatAssembler.getReducedVector(req);
   };
   auto KFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseFlatAssembler.getReducedMatrix(req);
   };
 
   auto K = KFunction(1.0, d);
-  auto R = fintFunction(1.0, d);
+  auto R = fextFunction(1.0, d);
   Eigen::SparseLU<decltype(K)> ld;
   ld.compute(K);
   if (ld.info() != Eigen::Success) assert(false && "Failed Compute");
@@ -213,6 +209,5 @@ int main(int argc, char **argv) {
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::nonconforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
   vtkWriter.addVertexData(pressure, Dune::VTK::FieldInfo("pressure", Dune::VTK::FieldInfo::Type::scalar, 1));
-
-  vtkWriter.write("TestIncompressible");
+  vtkWriter.write("iks004_incompressibleLinearElasticity");
 }

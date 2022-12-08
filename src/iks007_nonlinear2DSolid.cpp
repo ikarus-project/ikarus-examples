@@ -33,48 +33,30 @@
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
+// The following grid types (gridType) are included in this example
+// 0 - ALUGrid
+// 1 - YaspGrid
+// 2 - NURBSGrid
+
+// The following solver types (solverType) are included in this example
+// 0 - Newton Raphson method
+// 1 - Trust region method
+
+#define gridType 1
+#define solverType 0
+
 int main(int argc, char **argv) {
   Dune::MPIHelper::instance(argc, argv);
   using namespace Ikarus;
   constexpr int gridDim = 2;
-  //  //  /// ALUGrid Example
-  //  using Grid = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
-  //  auto grid  =
-  //  Dune::GmshReader<Grid>::read("auxiliaryFiles/unstructuredTrianglesfine.msh",
-  //  false); grid->globalRefine(1);
-  /// IGA Grid Example
-  constexpr auto dimworld = 2;
-  //  const std::array<int, gridDim> order = {2, 2};
 
-  //  const std::array<std::vector<double>, gridDim> knotSpans = {{{0, 0, 0, 1,
-  //  1, 1}, {0, 0, 0, 1, 1, 1}}};
-  //
-  //  using ControlPoint = Dune::IGA::NURBSPatchData<gridDim,
-  //  dimworld>::ControlPointType;
-  //
-  //  const std::vector<std::vector<ControlPoint>> controlPoints
-  //      = {{{.p = {0, 0}, .w = 5}, {.p = {0.5, 0}, .w = 1}, {.p = {1, 0}, .w =
-  //      1}},
-  //         {{.p = {0, 0.5}, .w = 1}, {.p = {0.5, 0.5}, .w = 10}, {.p = {1,
-  //         0.5}, .w = 1}},
-  //         {{.p = {0, 1}, .w = 1}, {.p = {0.5, 1}, .w = 1}, {.p = {1, 1}, .w =
-  //         1}}};
-  //
-  //  std::array<int, gridDim> dimsize = {(int)(controlPoints.size()),
-  //  (int)(controlPoints[0].size())};
-  //
-  //  auto controlNet = Dune::IGA::NURBSPatchData<gridDim,
-  //  dimworld>::ControlPointNetType(dimsize, controlPoints); using Grid      =
-  //  Dune::IGA::NURBSGrid<gridDim, dimworld>;
-  //
-  //  Dune::IGA::NURBSPatchData<gridDim, dimworld> patchData;
-  //  patchData.knotSpans     = knotSpans;
-  //  patchData.degree        = order;
-  //  patchData.controlPoints = controlNet;
-  //  auto grid               = std::make_shared<Grid>(patchData);
-  //  grid->globalRefine(1);
+#if gridType == 0
+  using Grid = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
+  auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/unstructuredTrianglesfine.msh", false);
+  grid->globalRefine(1);
+#endif
 
-  /// YaspGrid Example
+#if gridType == 1
   using Grid        = Dune::YaspGrid<gridDim>;
   const double L    = 1;
   const double h    = 1;
@@ -84,6 +66,33 @@ int main(int argc, char **argv) {
   Dune::FieldVector<double, 2> bbox       = {L, h};
   std::array<int, 2> elementsPerDirection = {elex, eley};
   auto grid                               = std::make_shared<Grid>(bbox, elementsPerDirection);
+#endif
+
+#if gridType == 2
+  constexpr auto dimworld              = 2;
+  const std::array<int, gridDim> order = {2, 2};
+
+  const std::array<std::vector<double>, gridDim> knotSpans = {{{0, 0, 0, 1, 1, 1}, {0, 0, 0, 1, 1, 1}}};
+
+  using ControlPoint = Dune::IGA::NURBSPatchData<gridDim, dimworld>::ControlPointType;
+
+  const std::vector<std::vector<ControlPoint>> controlPoints
+      = {{{.p = {0, 0}, .w = 5}, {.p = {0.5, 0}, .w = 1}, {.p = {1, 0}, .w = 1}},
+         {{.p = {0, 0.5}, .w = 1}, {.p = {0.5, 0.5}, .w = 10}, {.p = {1, 0.5}, .w = 1}},
+         {{.p = {0, 1}, .w = 1}, {.p = {0.5, 1}, .w = 1}, {.p = {1, 1}, .w = 1}}};
+
+  std::array<int, gridDim> dimsize = {(int)(controlPoints.size()), (int)(controlPoints[0].size())};
+
+  auto controlNet = Dune::IGA::NURBSPatchData<gridDim, dimworld>::ControlPointNetType(dimsize, controlPoints);
+  using Grid      = Dune::IGA::NURBSGrid<gridDim, dimworld>;
+
+  Dune::IGA::NURBSPatchData<gridDim, dimworld> patchData;
+  patchData.knotSpans     = knotSpans;
+  patchData.degree        = order;
+  patchData.controlPoints = controlNet;
+  auto grid               = std::make_shared<Grid>(patchData);
+  grid->globalRefine(2);
+#endif
 
   auto gridView        = grid->leafGridView();
   const auto &indexSet = gridView.indexSet();
@@ -107,9 +116,14 @@ int main(int argc, char **argv) {
   BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
   using namespace Dune::Functions::BasisFactory;
-  //  auto basis = makeBasis(gridView, power<gridDim>(gridView.getPreBasis(),
-  //  FlatInterleaved()));
+
+#if gridType == 0 or gridType == 1
   auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
+#endif
+#if (gridType == 2)
+  auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(gridView.impl().getPreBasis(), FlatInterleaved()));
+#endif
+
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
   std::cout << gridView.size(1) << " edges" << std::endl;
@@ -123,8 +137,6 @@ int main(int argc, char **argv) {
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
-    fext[1] = 2 * lamb * 0;
-    fext[0] = lamb * 0;
     return fext;
   };
 
@@ -132,7 +144,6 @@ int main(int argc, char **argv) {
     Eigen::Vector2d fext;
     fext.setZero();
     fext[1] = lamb / 40;
-    fext[0] = 0;
     return fext;
   };
 
@@ -151,30 +162,23 @@ int main(int argc, char **argv) {
   d.setZero(basis->size());
   double lambda = 0.0;
 
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
   auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getVector(req);
   };
 
   auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getMatrix(req);
   };
 
-  auto energyFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::ScalarAffordances::mechanicalPotentialEnergy)
-                                     .build();
+  auto energyFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getScalar(req);
   };
 
@@ -183,21 +187,25 @@ int main(int argc, char **argv) {
 
   auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::sd_UmfPackLU);
 
+#if solverType == 0
   auto nr = Ikarus::makeNewtonRaphson(nonLinOp.subOperator<1, 2>(), std::move(linSolver));
-  //  auto nr = Ikarus::makeTrustRegion(nonLinOp);
-  //  nr->setup({.verbosity = 1,
-  //             .maxiter   = 30,
-  //             .grad_tol  = 1e-8,
-  //             .corr_tol  = 1e-8,
-  //             .useRand   = false,
-  //             .rho_reg   = 1e6,
-  //             .Delta0    = 1});
+#endif
+#if solverType == 1
+  auto nr = Ikarus::makeTrustRegion(nonLinOp);
+  nr->setup({.verbosity = 1,
+             .maxiter   = 30,
+             .grad_tol  = 1e-8,
+             .corr_tol  = 1e-8,
+             .useRand   = false,
+             .rho_reg   = 1e6,
+             .Delta0    = 1});
+#endif
 
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
   auto vtkWriter
       = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
-  vtkWriter->setFileNamePrefix("Test2Dsolid");
+  vtkWriter->setFileNamePrefix("iks007_nonlinear2DSolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   nr->subscribeAll(nonLinearSolverObserver);
 

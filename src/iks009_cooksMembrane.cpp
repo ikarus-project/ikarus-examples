@@ -83,8 +83,6 @@ int main(int argc, char** argv) {
   auto volumeLoad = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
-    fext[1] = 2 * lamb * 0;
-    fext[0] = lamb * 0;
     return fext;
   };
 
@@ -124,31 +122,18 @@ int main(int argc, char** argv) {
 
   auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
   auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getMatrix(req);
   };
 
   auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getVector(req);
-  };
-
-  auto energyFunction = [&](auto&& disp_, auto&& lambdaLocal) -> auto& {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::ScalarAffordances::mechanicalPotentialEnergy)
-                                     .build();
-    return sparseAssembler.getScalar(req);
   };
 
   Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis->size());
@@ -176,7 +161,7 @@ int main(int argc, char** argv) {
   auto disp = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(*basis, D_Glob);
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
-  vtkWriter.write("Cook_Membrane");
+  vtkWriter.write("iks009_cooksMembrane");
   auto stop     = std::chrono::high_resolution_clock::now();
   auto duration = duration_cast<std::chrono::milliseconds>(stop - start);
   spdlog::info("The total execution took {} milliseconds", duration.count());
