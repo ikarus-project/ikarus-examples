@@ -11,7 +11,8 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 
 This repository tries to provide various problems solved with [Ikarus](https://ikarus-project.github.io/), thereby serving as a sandbox of examples used to understand the working of the tool itself.
 The examples are motivated within the finite element framework.
-In order to only work with the examples of Ikarus, the IkarusExamples repository is to be downloaded and Ikarus could be pulled by using the following command in PowerShell:
+In order to only work with the examples of Ikarus, the ikarus-examples repository is to be downloaded.
+The simplest way to use ikarus is pulling the docker image by using the following command:
 ```sh
 docker pull rath3t/ikarus:latest
 ```
