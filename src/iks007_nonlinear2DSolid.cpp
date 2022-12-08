@@ -162,30 +162,23 @@ int main(int argc, char **argv) {
   d.setZero(basis->size());
   double lambda = 0.0;
 
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
   auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getVector(req);
   };
 
   auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getMatrix(req);
   };
 
-  auto energyFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::ScalarAffordances::mechanicalPotentialEnergy)
-                                     .build();
+  auto energyFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getScalar(req);
   };
 

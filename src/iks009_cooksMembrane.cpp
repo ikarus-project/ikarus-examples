@@ -122,21 +122,17 @@ int main(int argc, char** argv) {
 
   auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
   auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getMatrix(req);
   };
 
   auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getVector(req);
   };
 

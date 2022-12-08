@@ -51,7 +51,7 @@ struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Bas
  private:
   template <class Scalar>
   Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
-    const auto &d      = par.getSolution(Ikarus::FESolutions::displacement);
+    const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
     auto &ele     = localView_.element();
@@ -118,22 +118,18 @@ int main() {
   Eigen::VectorXd d;
   d.setZero(basis->size());
 
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
   auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, u)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     auto &R = denseFlatAssembler.getVector(req);
     R[3] -= -lambdaLocal;
     return R;
   };
   auto KFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, u)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return denseFlatAssembler.getMatrix(req);
   };
 

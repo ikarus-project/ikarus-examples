@@ -64,7 +64,7 @@ struct Solid : Ikarus::AutoDiffFE<Solid<Basis>, Basis> {
   template <class ScalarType>
   [[nodiscard]] ScalarType calculateScalarImpl(const FERequirementType &par,
                                                const Eigen::VectorX<ScalarType> &dx) const {
-    const auto &d      = par.getSolution(Ikarus::FESolutions::displacement);
+    const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(Ikarus::FEParameter::loadfactor);
     Eigen::VectorX<ScalarType> localDisp(localView_.size());
     localDisp.setZero();
@@ -180,20 +180,16 @@ int main(int argc, char **argv) {
   Eigen::VectorXd d;
   d.setZero(basis->size());
 
+  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
   auto fextFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::VectorAffordances::forces)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return denseFlatAssembler.getReducedVector(req);
   };
   auto KFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
-    Ikarus::FErequirements req = FErequirementsBuilder()
-                                     .insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
-                                     .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                     .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                     .build();
+    req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
+        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseFlatAssembler.getReducedMatrix(req);
   };
 

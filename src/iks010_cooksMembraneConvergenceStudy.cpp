@@ -130,21 +130,17 @@ int main(int argc, char **argv) {
 
       auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
+      auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+
       auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
-        Ikarus::FErequirements req = FErequirementsBuilder()
-                                         .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                         .addAffordance(Ikarus::MatrixAffordances::stiffness)
-                                         .build();
+        req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+            .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
         return sparseAssembler.getMatrix(req);
       };
 
       auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
-        Ikarus::FErequirements req = FErequirementsBuilder()
-                                         .insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-                                         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal)
-                                         .addAffordance(Ikarus::VectorAffordances::forces)
-                                         .build();
+        req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
+            .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
         return sparseAssembler.getVector(req);
       };
 
@@ -184,14 +180,13 @@ int main(int argc, char **argv) {
       auto localw    = localFunction(dispGlobalFunc);
       double uy_fe   = 0.0;
       Eigen::Vector2d req_pos;
-      req_pos[0] = 48.0;
-      req_pos[1] = 60.0;
+      req_pos << 48.0, 60.0;
       for (auto &ele : elements(gridView)) {
         localView.bind(ele);
         localw.bind(ele);
         const auto geo = localView.element().geometry();
         for (size_t i = 0; i < 4; ++i) {
-          if ((geo.corner(i)[0] == req_pos[0]) and (geo.corner(i)[1] == req_pos[1])) {
+          if (Dune::FloatCmp::eq(geo.corner(i)[0], req_pos[0]) and Dune::FloatCmp::eq(geo.corner(i)[1], req_pos[1])) {
             const auto local_pos = geo.local(toDune(req_pos));
             uy_fe                = toEigen(localw(local_pos)).eval()[1];
           }

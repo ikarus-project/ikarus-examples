@@ -47,7 +47,7 @@ void newtonRaphsonVeryBasicExample() {
 class OurFirstObserver : public IObserver<NonLinearSolverMessages> {
  public:
   void updateImpl(NonLinearSolverMessages message) override {
-    if (message == NonLinearSolverMessages::ITERATION_STARTED) std::cout << "Yeah, the iteration started. Let's go!\n";
+    if (message == NonLinearSolverMessages::ITERATION_STARTED) std::cout << "Iteration started.\n";
   }
 };
 
