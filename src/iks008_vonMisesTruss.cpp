@@ -10,7 +10,7 @@
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/powerbasis.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dube/localfefunctions/linearAlgebraHelper.hh>
+#include <dune/localfefunctions/linearAlgebraHelper.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 
 #include <Eigen/Core>
