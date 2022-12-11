@@ -22,8 +22,8 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
-#include <ikarus/localBasis/localBasis.hh>
-#include <ikarus/localFunctions/impl/standardLocalFunction.hh>
+#include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
+#include <dune/localfefunctions/impl/standardLocalFunction.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>
@@ -88,8 +88,8 @@ struct Solid : Ikarus::AutoDiffFE<Solid<Basis>, Basis> {
     const int order  = 2 * (feDisp.localBasis().order());
     const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView_.element().type(), order);
     const auto geo   = localView_.element().geometry();
-    Ikarus::LocalBasis localBasisDisp(feDisp.localBasis());
-    Ikarus::LocalBasis localBasisPressure(fePressure.localBasis());
+    Dune::CachedLocalBasis localBasisDisp(feDisp.localBasis());
+    Dune::CachedLocalBasis localBasisPressure(fePressure.localBasis());
     Eigen::Matrix<double, Eigen::Dynamic, Traits::mydim> dNdisp;
     Eigen::VectorXd Ndisp;
     Eigen::VectorXd Npressure;
@@ -105,7 +105,7 @@ struct Solid : Ikarus::AutoDiffFE<Solid<Basis>, Basis> {
       ScalarType pressure = pN.dot(Npressure);
 
       const auto gradu      = (disp * dNdisp.template cast<ScalarType>() * J.inverse()).eval();
-      const auto symgradu   = sym(gradu);
+      const auto symgradu   = Dune::sym(gradu);
       const ScalarType divU = gradu.trace();
 
       Eigen::Vector<double, Traits::worlddim> fext;

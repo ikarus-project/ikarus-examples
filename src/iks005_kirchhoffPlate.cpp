@@ -13,6 +13,8 @@
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/iga/igaalgorithms.hh>
 #include <dune/iga/nurbsgrid.hh>
+#include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
+#include <dune/localfefunctions/eigenDuneTransformations.hh>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -24,7 +26,6 @@
 #include <ikarus/finiteElements/feTraits.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/concepts.hh>
@@ -77,40 +78,37 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
     auto &fe            = localView_.tree().finiteElement();
     Eigen::VectorX<Scalar> wNodal;
     wNodal.setZero(fe.size());
+    Dune::CachedLocalBasis localBasis(fe.localBasis());
+    const auto &rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
+
+    localBasis.bind(rule,Dune::bindDerivatives(0,2));
     for (auto i = 0U; i < fe.size(); ++i)
       wNodal(i) = dx[i] + wGlobal[localView_.index(localView_.tree().localIndex(i))[0]];
 
-    const auto &localBasis = fe.localBasis();
 
-    const auto &rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
     /// Calculate Kirchhoff plate energy
-    for (auto &gp : rule) {
-      std::vector<Dune::FieldVector<double, 1>> dN_xixi;
-      std::vector<Dune::FieldVector<double, 1>> dN_xieta;
-      std::vector<Dune::FieldVector<double, 1>> dN_etaeta;
-      std::vector<Dune::FieldVector<double, 1>> N_dune;
-      Eigen::VectorXd N(fe.size());
+    for (auto&& [gpIndex,gp] : localBasis.viewOverIntegrationPoints()) {
 
-      localBasis.evaluateFunction(gp.position(), N_dune);
-      std::ranges::copy(N_dune, N.begin());
-      localBasis.partial({2, 0}, gp.position(), dN_xixi);
-      localBasis.partial({1, 1}, gp.position(), dN_xieta);
-      localBasis.partial({0, 2}, gp.position(), dN_etaeta);
+      auto& N =localBasis.evaluateFunction(gpIndex);
+      auto& ddN =localBasis.evaluateSecondDerivatives(gpIndex);
+      auto& ddN_xixi = ddN.col(0);
+      auto& ddN_etaeta = ddN.col(1);
+      auto& ddN_xieta = ddN.col(2);
 
-      const auto Jinv = Ikarus::toEigen(geometry_->jacobianInverseTransposed(gp.position())).transpose().eval();
+      const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gp.position())).transpose().eval();
 
-      Eigen::VectorXd dN_xx(fe.size());
-      Eigen::VectorXd dN_yy(fe.size());
-      Eigen::VectorXd dN_xy(fe.size());
+      Eigen::VectorXd ddN_xx(fe.size());
+      Eigen::VectorXd ddN_yy(fe.size());
+      Eigen::VectorXd ddN_xy(fe.size());
       using Dune::power;
       // The following derivative transformation assumes a non-distorted grid, otherwise there would be non-linear terms
       for (auto i = 0U; i < fe.size(); ++i) {
-        dN_xx[i] = dN_xixi[i] * power(Jinv(0, 0), 2);
-        dN_yy[i] = dN_etaeta[i] * power(Jinv(1, 1), 2);
-        dN_xy[i] = dN_xieta[i] * Jinv(0, 0) * Jinv(1, 1);
+        ddN_xx[i] = ddN_xixi[i] * power(Jinv(0, 0), 2);
+        ddN_yy[i] = ddN_etaeta[i] * power(Jinv(1, 1), 2);
+        ddN_xy[i] = ddN_xieta[i] * Jinv(0, 0) * Jinv(1, 1);
       }
       Eigen::Vector<Scalar, 3> kappa;
-      kappa << dN_xx.dot(wNodal), dN_yy.dot(wNodal), 2 * dN_xy.dot(wNodal);
+      kappa << ddN_xx.dot(wNodal), ddN_yy.dot(wNodal), 2 * ddN_xy.dot(wNodal);
       Scalar w = N.dot(wNodal);
 
       energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry_->integrationElement(gp.position()) * gp.weight();
@@ -122,16 +120,16 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
       for (auto &intersection : intersections(localView_.globalBasis().gridView(), ele))
         if (intersection.boundary()) {
           const auto &rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
+            Eigen::MatrixX2d dN_xi_eta;
           for (auto &gp : rule1) {
             const auto &gpInElement = intersection.geometryInInside().global(gp.position());
-            std::vector<Dune::FieldMatrix<double, 1, 2>> dN_xi_eta;
             localBasis.evaluateJacobian(gpInElement, dN_xi_eta);
             Eigen::VectorXd dN_x(fe.size());
             Eigen::VectorXd dN_y(fe.size());
-            const auto Jinv = Ikarus::toEigen(geometry_->jacobianInverseTransposed(gpInElement)).transpose().eval();
+            const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gpInElement)).transpose().eval();
             for (auto i = 0U; i < fe.size(); ++i) {
-              dN_x[i] = dN_xi_eta[i][0][0] * Jinv(0, 0);
-              dN_y[i] = dN_xi_eta[i][0][1] * Jinv(1, 1);
+              dN_x[i] = dN_xi_eta(i,0) * Jinv(0, 0);
+              dN_y[i] = dN_xi_eta(i,1) * Jinv(1, 1);
             }
             const Scalar w_x = dN_x.dot(wNodal);
             const Scalar w_y = dN_y.dot(wNodal);
