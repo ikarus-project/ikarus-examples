@@ -24,7 +24,6 @@
 #include <ikarus/finiteElements/mechanics/linearElastic.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>

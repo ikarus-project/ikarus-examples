@@ -8,6 +8,10 @@ project(
   LANGUAGES C CXX
 )
 
+cmake_policy(SET CMP0087 NEW)
+
+add_definitions(-DDUNE_LOCALFEFUNCTIONS_USE_EIGEN=1)
+
 if(NOT
    (dune-common_DIR
     OR dune-common_ROOT

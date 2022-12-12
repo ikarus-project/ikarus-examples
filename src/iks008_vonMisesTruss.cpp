@@ -11,6 +11,7 @@
 #include <dune/functions/functionspacebases/powerbasis.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/localfefunctions/eigenDuneTransformations.hh>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -55,8 +56,8 @@ struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Bas
     const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
     auto &ele     = localView_.element();
-    const auto X1 = Ikarus::toEigen(ele.geometry().corner(0));
-    const auto X2 = Ikarus::toEigen(ele.geometry().corner(1));
+    const auto X1 = Dune::toEigen(ele.geometry().corner(0));
+    const auto X2 = Dune::toEigen(ele.geometry().corner(1));
 
     Eigen::Matrix<Scalar, Traits::worlddim, 2> u;
     u.setZero();

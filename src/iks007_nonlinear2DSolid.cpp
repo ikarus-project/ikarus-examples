@@ -24,7 +24,6 @@
 #include <ikarus/finiteElements/mechanics/nonLinearElasticityFE.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/manifolds/realTuple.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/solver/nonLinearSolver/trustRegion.hh>
 #include <ikarus/utils/algorithms.hh>

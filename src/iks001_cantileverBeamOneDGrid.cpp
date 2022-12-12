@@ -14,10 +14,10 @@
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/onedgrid.hh>
+#include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
 
 #include <Eigen/Core>
 
-#include <ikarus/localBasis/localBasis.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 using namespace Dune::Functions::BasisFactory;
@@ -31,8 +31,8 @@ void TimoshenkoBeamStiffness(auto &KLocal, auto &localView, auto &gridElement, a
 
   auto wFE   = localView.tree().child(_0);
   auto phiFE = localView.tree().child(_1);
-  Ikarus::LocalBasis basisW(wFE.finiteElement().localBasis());
-  Ikarus::LocalBasis basisPhi(phiFE.finiteElement().localBasis());
+  Dune::CachedLocalBasis basisW(wFE.finiteElement().localBasis());
+  Dune::CachedLocalBasis basisPhi(phiFE.finiteElement().localBasis());
 
   /// Determinant of Jacobian, obtained from gridElement
   auto detJ = gridElement.geometry().volume();
