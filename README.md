@@ -32,4 +32,4 @@ cmake --build . --parallel 2 --target iksXXX
 ```
 `iksXXX` should be replaced by the desired executable file in the above-mentioned set of commands.
 
-A documentation on existing examples resides at [Link](https://ikarus-project.github.io/examples/).
+The corresponding documentation for existing examples resides at the [link](https://ikarus-project.github.io/examples/).

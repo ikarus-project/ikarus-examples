@@ -39,8 +39,17 @@ int main(int argc, char **argv) {
   double lambdaLoad         = 1;
   constexpr int basis_order = 1;
 
-  const double E  = 1.0;
-  const double nu = 1.0 / 3.0;
+  /// read in parameters
+  Dune::ParameterTree parameterSet;
+  Dune::ParameterTreeParser::readINITree(argv[1], parameterSet);
+
+  const Dune::ParameterTree &gridParameters     = parameterSet.sub("GridParameters");
+  const Dune::ParameterTree &controlParameters  = parameterSet.sub("ControlParameters");
+  const Dune::ParameterTree &materialParameters = parameterSet.sub("MaterialParameters");
+
+  const double E             = materialParameters.get<double>("E");
+  const double nu            = materialParameters.get<double>("nu");
+  const int refinement_level = gridParameters.get<int>("refinement");
 
   using Grid = Dune::UGGrid<gridDim>;
 
@@ -68,7 +77,9 @@ int main(int argc, char **argv) {
     dispVec.clear();
     timeVec.clear();
     auto grid = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook.msh", false);
-    for (size_t ref = 0; ref < 5; ++ref) {
+    //  auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook_tri.msh", false);
+    //  auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook_unstructured.msh", false);
+    for (size_t ref = 0; ref < refinement_level; ++ref) {
       auto start                 = std::chrono::high_resolution_clock::now();
       auto gridView              = grid->leafGridView();
       auto numberOfEASParameters = easSet(nep);
@@ -174,7 +185,7 @@ int main(int argc, char **argv) {
       Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
       vtkWriter.addVertexData(dispGlobalFunc,
                               Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
-      vtkWriter.write("iks010_cooksMembraneConvergenceStudy" + std::to_string(ref));
+      vtkWriter.write("iks008_cooksMembrane" + std::to_string(ref));
       auto localView = basis->localView();
       auto localw    = localFunction(dispGlobalFunc);
       double uy_fe   = 0.0;

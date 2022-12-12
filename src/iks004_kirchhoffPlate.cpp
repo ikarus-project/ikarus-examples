@@ -234,7 +234,7 @@ int main() {
     auto wGlobalFunc = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(*basis, w);
     Dune::SubsamplingVTKWriter vtkWriter(gridView, Dune::refinementLevels(2));
     vtkWriter.addVertexData(wGlobalFunc, Dune::VTK::FieldInfo("w", Dune::VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("iks005_kirchhoffPlate");
+    vtkWriter.write("iks004_kirchhoffPlate");
 
     /// Create analytical solution function for the simply supported case
     const double D = Emod * Dune::power(thickness, 3) / (12 * (1 - Dune::power(nu, 2)));
