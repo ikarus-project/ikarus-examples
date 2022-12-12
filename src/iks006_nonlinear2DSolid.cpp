@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
 
   auto vtkWriter
       = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
-  vtkWriter->setFileNamePrefix("iks007_nonlinear2DSolid");
+  vtkWriter->setFileNamePrefix("iks006_nonlinear2DSolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   nr->subscribeAll(nonLinearSolverObserver);
 

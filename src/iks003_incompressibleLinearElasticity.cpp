@@ -209,5 +209,5 @@ int main(int argc, char **argv) {
   Dune::VTKWriter vtkWriter(gridView, Dune::VTK::nonconforming);
   vtkWriter.addVertexData(disp, Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
   vtkWriter.addVertexData(pressure, Dune::VTK::FieldInfo("pressure", Dune::VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("iks004_incompressibleLinearElasticity");
+  vtkWriter.write("iks003_incompressibleLinearElasticity");
 }

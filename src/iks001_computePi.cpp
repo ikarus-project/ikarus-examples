@@ -8,11 +8,61 @@
 #include <dune/alugrid/grid.hh>
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/common/boundarysegment.hh>
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
 #include <ikarus/utils/drawing/griddrawer.hh>
+
+void boundaryUnawareRefinedCircle() {
+  std::cout << std::endl << "Comparing the values of Pi with global refinements of unit circle" << std::endl;
+
+  constexpr int gridDim = 2;  // (1)
+  using Grid            = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
+  auto grid             = Dune::GmshReader<Grid>::read("auxiliaryFiles/circleCoarse.msh", false);
+  auto gridView         = grid->leafGridView();  // (2)
+
+  // draw(gridView);
+
+  /// Calculate area from volume function of elements
+  double area = 0.0;
+
+  /// Naive refinement of grid and compare calculated area to pi
+  for (int i = 0; i < 3; ++i) {
+    area = 0.0;
+    grid->globalRefine(1);
+
+    auto gridViewRefined = grid->leafGridView();
+    std::cout << "This gridview contains: ";
+    std::cout << gridViewRefined.size(0) << " elements" << std::endl;
+    //    draw(gridViewRefined);
+    for (auto &element : elements(gridViewRefined)) {
+      area += element.geometry().volume();
+    }
+    std::cout << std::setprecision(10) << "Area: " << area << " Pi: " << std::numbers::pi << std::endl;
+  }
+  /// write element areas to vtk
+  std::vector<double> areas;
+  areas.resize(gridView.size(0));
+
+  auto &indexSet = gridView.indexSet();
+  for (auto &ele : elements(gridView))
+    areas[indexSet.index(ele)] = ele.geometry().volume();
+
+  Dune::VTKWriter vtkWriter(gridView);
+  vtkWriter.addCellData(areas, "area", 1);
+  vtkWriter.write("iks001_computePi");
+
+  /// Calculate circumference and compare to pi
+  double circumference = 0.0;
+  for (auto &element : elements(gridView))
+    if (element.hasBoundaryIntersections())
+      for (auto &intersection : intersections(gridView, element))
+        if (intersection.boundary()) circumference += intersection.geometry().volume();
+
+  std::cout << std::setprecision(10) << "Circumference: " << circumference << " Pi: " << std::numbers::pi << std::endl;
+}
 
 struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
   UnitCircleBoundary(const Dune::FieldVector<double, 2> &a, const Dune::FieldVector<double, 2> &b) : corners{{a, b}} {}
@@ -25,9 +75,9 @@ struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
   std::array<Dune::FieldVector<double, 2>, 2> corners;
 };
 
-int main(int argc, char **argv) {
-  Dune::MPIHelper::instance(argc, argv);
-
+void boundaryAwareRefinedCircle() {
+  std::cout << std::endl
+            << "Comparing the values of Pi with local refinement on the boundary of unit circle" << std::endl;
   /// Create a grid from 6 triangles align in unit disc
   using namespace Dune;
   constexpr int gridDim = 2;
@@ -89,7 +139,7 @@ int main(int argc, char **argv) {
     for (auto &element : elements(gridViewRefined))
       area += element.geometry().volume();
 
-    std::cout << area << " " << std::numbers::pi << std::endl;
+    std::cout << std::setprecision(10) << "Area: " << area << " Pi: " << std::numbers::pi << std::endl;
     // draw(gridViewRefined);
   }
   /// Calculate circumference and compare to pi
@@ -99,5 +149,12 @@ int main(int argc, char **argv) {
       for (auto &intersection : intersections(grid->leafGridView(), element))
         if (intersection.boundary()) circumference += intersection.geometry().volume();
 
-  std::cout << circumference / 2 << " " << std::numbers::pi << std::endl;
+  std::cout << std::setprecision(10) << "Circumference: " << circumference / 2 << " Pi: " << std::numbers::pi
+            << std::endl;
+}
+
+int main(int argc, char **argv) {
+  Dune::MPIHelper::instance(argc, argv);
+  boundaryUnawareRefinedCircle();
+  boundaryAwareRefinedCircle();
 }

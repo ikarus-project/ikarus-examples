@@ -163,7 +163,7 @@ int main() {
   auto vtkWriter
       = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
-  vtkWriter->setFileNamePrefix("iks008_vonMisesTruss");
+  vtkWriter->setFileNamePrefix("iks007_vonMisesTruss");
   nr->subscribeAll(nonLinearSolverObserver);
 
   /// Create loadcontrol
