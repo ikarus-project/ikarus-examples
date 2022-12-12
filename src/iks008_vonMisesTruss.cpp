@@ -10,8 +10,8 @@
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/powerbasis.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/localfefunctions/eigenDuneTransformations.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/localfefunctions/eigenDuneTransformations.hh>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>

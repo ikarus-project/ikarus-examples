@@ -14,6 +14,8 @@
 #include <dune/functions/functionspacebases/subspacebasis.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
+#include <dune/localfefunctions/impl/standardLocalFunction.hh>
 
 #include <Eigen/Core>
 
@@ -22,8 +24,6 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
-#include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
-#include <dune/localfefunctions/impl/standardLocalFunction.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>

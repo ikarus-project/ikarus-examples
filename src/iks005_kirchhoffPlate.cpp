@@ -81,19 +81,17 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
     Dune::CachedLocalBasis localBasis(fe.localBasis());
     const auto &rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
 
-    localBasis.bind(rule,Dune::bindDerivatives(0,2));
+    localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     for (auto i = 0U; i < fe.size(); ++i)
       wNodal(i) = dx[i] + wGlobal[localView_.index(localView_.tree().localIndex(i))[0]];
 
-
     /// Calculate Kirchhoff plate energy
-    for (auto&& [gpIndex,gp] : localBasis.viewOverIntegrationPoints()) {
-
-      auto& N =localBasis.evaluateFunction(gpIndex);
-      auto& ddN =localBasis.evaluateSecondDerivatives(gpIndex);
-      auto& ddN_xixi = ddN.col(0);
-      auto& ddN_etaeta = ddN.col(1);
-      auto& ddN_xieta = ddN.col(2);
+    for (auto &&[gpIndex, gp] : localBasis.viewOverIntegrationPoints()) {
+      auto &N          = localBasis.evaluateFunction(gpIndex);
+      auto &ddN        = localBasis.evaluateSecondDerivatives(gpIndex);
+      auto &ddN_xixi   = ddN.col(0);
+      auto &ddN_etaeta = ddN.col(1);
+      auto &ddN_xieta  = ddN.col(2);
 
       const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gp.position())).transpose().eval();
 
@@ -120,7 +118,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
       for (auto &intersection : intersections(localView_.globalBasis().gridView(), ele))
         if (intersection.boundary()) {
           const auto &rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
-            Eigen::MatrixX2d dN_xi_eta;
+          Eigen::MatrixX2d dN_xi_eta;
           for (auto &gp : rule1) {
             const auto &gpInElement = intersection.geometryInInside().global(gp.position());
             localBasis.evaluateJacobian(gpInElement, dN_xi_eta);
@@ -128,8 +126,8 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
             Eigen::VectorXd dN_y(fe.size());
             const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gpInElement)).transpose().eval();
             for (auto i = 0U; i < fe.size(); ++i) {
-              dN_x[i] = dN_xi_eta(i,0) * Jinv(0, 0);
-              dN_y[i] = dN_xi_eta(i,1) * Jinv(1, 1);
+              dN_x[i] = dN_xi_eta(i, 0) * Jinv(0, 0);
+              dN_y[i] = dN_xi_eta(i, 1) * Jinv(1, 1);
             }
             const Scalar w_x = dN_x.dot(wNodal);
             const Scalar w_y = dN_y.dot(wNodal);
