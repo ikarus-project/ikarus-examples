@@ -14,14 +14,14 @@ The examples are motivated within the finite element framework.
 In order to only work with the examples of Ikarus, the ikarus-examples repository is to be downloaded.
 The simplest way to use ikarus is pulling the docker image by using the following command:
 ```sh
-docker pull rath3t/ikarus:latest
+docker pull ikarusproject/ikarus:latest
 ```
 More details on the installation can be found in the [documentation](https://ikarus-project.github.io/download/).
 
 The examples can be executed using a software like Clion or directly from a command line as shown below.
 
 ```sh
-docker container run -it --entrypoint /bin/bash  rath3t/ikarus:latest 
+docker container run -it --entrypoint /bin/bash  ikarusproject/ikarus:latest 
 git clone https://github.com/ikarus-project/ikarus-examples.git &&
 cd ikarus-examples &&
 mkdir build &&
