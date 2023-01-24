@@ -1,7 +1,12 @@
-Copyright holders:
-==================
-2021-2022 Alexander Müller
-2022      Tarun Kumar Mitruka Vinod Kumar Mitruka
 
-All licenses reside at the folder LICENSES.
-Each source file here has the corresponding header for license information
+# Copyright holders
+
+- 2021-2023 Alexander Müller
+- 2022-2023 Tarun Kumar Mitruka Vinod Kumar Mitruka
+
+We use [REUSE software](https://reuse.software/) to manage our licenses.
+All licenses reside in the folder `LICENSES`.
+Each source file here has the corresponding header for license information.
+The Ikarus source files are released under `LGPL-3.0-or-later`.
+
+Several minor files are released under the public domain `CC0-1.0`.
