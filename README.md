@@ -27,9 +27,9 @@ cd ikarus-examples &&
 mkdir build &&
 cd build &&
 cmake ../ -DCMAKE_BUILD_TYPE=Release &&
-cmake --build . --parallel 2 --target iksXXX
-./src/iksXXX
+cmake --build . --parallel 2 --target <filenameWithoutExtension>
+cd src
+./<filenameWithoutExtension>
 ```
-`iksXXX` should be replaced by the desired executable file in the above-mentioned set of commands.
 
 The corresponding documentation for existing examples resides at the [link](https://ikarus-project.github.io/examples/).
