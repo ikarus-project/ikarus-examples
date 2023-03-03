@@ -208,7 +208,7 @@ int main() {
     Eigen::VectorXd w;
     w.setZero(basis->size());
 
-    const double totalLoad = 2000;
+    double totalLoad = 2000;
 
     auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
