@@ -132,7 +132,13 @@ int main(int argc, char **argv) {
   //  draw(gridView);
 
   auto localView = basis->localView();
-  std::vector<Ikarus::NonLinearElasticityFE<typename decltype(basis)::element_type>> fes;
+
+  auto matParameter = Ikarus::toLamesFirstParameterAndShearModulus({.emodul = 1000, .nu = 0.3});
+
+  Ikarus::StVenantKirchhoff matSVK(matParameter);
+  auto reducedMat = plainStress(matSVK, 1e-8);
+  std::vector<Ikarus::NonLinearElasticityFE<typename decltype(basis)::element_type, decltype(reducedMat)>> fes;
+
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
@@ -147,7 +153,7 @@ int main(int argc, char **argv) {
   };
 
   for (auto &element : elements(gridView))
-    fes.emplace_back(*basis, element, 1000, 0.3, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
+    fes.emplace_back(*basis, element, reducedMat, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
 
   Ikarus::DirichletValues dirichletValues(basis);
 
