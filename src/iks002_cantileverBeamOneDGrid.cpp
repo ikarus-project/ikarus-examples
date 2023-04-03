@@ -3,6 +3,7 @@
 
 #include <config.h>
 
+#include <dune/common/exceptions.hh>
 #include <dune/common/float_cmp.hh>
 #include <dune/common/indices.hh>
 #include <dune/functions/functionspacebases/basistags.hh>
@@ -90,9 +91,9 @@ unsigned int getGlobalDofIdImpl(const auto &basis, const double position) {
       }
     }
   }
-  throw std::runtime_error(
-      "There is no desired DOF at the requested position. Currently, only "
-      "DOFs at vertices are supported.");
+  DUNE_THROW(Dune::InvalidStateException,
+             "There is no desired DOF at the requested position. Currently, only "
+             "DOFs at vertices are supported.");
 }
 
 unsigned int getGlobalDofId(TimoshenkoBeam requestedQuantity, const auto &basis, const double position) {
@@ -102,7 +103,7 @@ unsigned int getGlobalDofId(TimoshenkoBeam requestedQuantity, const auto &basis,
   else if (requestedQuantity == TimoshenkoBeam::phi)
     return getGlobalDofIdImpl(subspaceBasis(basis.flat(), _1), position);
   else
-    throw std::runtime_error("The requested quantity is not supported");
+    DUNE_THROW(Dune::InvalidStateException, "The requested quantity is not supported");
 }
 
 void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, double EI, double GA, double L, double F) {

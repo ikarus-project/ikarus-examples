@@ -201,10 +201,10 @@ int main(int argc, char **argv) {
   auto R = fextFunction(1.0, d);
   Eigen::SparseLU<decltype(K)> ld;
   ld.compute(K);
-  if (ld.info() != Eigen::Success) assert(false && "Failed Compute");
+  if (ld.info() != Eigen::Success) DUNE_THROW(Dune::MathError, "Failed Compute");
 
   d -= denseFlatAssembler.createFullVector(ld.solve(R));
-  if (ld.info() != Eigen::Success) assert(false && "Failed Solve");
+  if (ld.info() != Eigen::Success) DUNE_THROW(Dune::MathError, "Failed Solve");
 
   /// Postprocess
   auto disp = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(
