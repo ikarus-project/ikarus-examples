@@ -6,6 +6,7 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
+#include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
 auto f(double &x) { return 0.5 * x * x + x - 2; }
@@ -80,7 +81,8 @@ void newtonRaphsonBasicExampleWithLogger() {
     std::cout << "The Newton-Raphson procedure failed to converge" << std::endl;
 }
 
-int main() {
+int main(int argc, char **argv) {
+  Ikarus::init(argc, argv);
   newtonRaphsonVeryBasicExample();
   std::cout << "\nWith Logger\n\n";
   newtonRaphsonBasicExampleWithLogger();

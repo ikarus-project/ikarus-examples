@@ -28,32 +28,36 @@
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/algorithms.hh>
+#include <ikarus/utils/basis.hh>
 #include <ikarus/utils/concepts.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
+#include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/loadControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
 template <typename Basis>
-struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, Basis> {
-  using BaseDisp = Ikarus::ScalarFieldFE<Basis>;
-  using BaseAD   = Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, Basis>;
+struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
+                        public Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, typename Basis::FlatBasis> {
+  using FlatBasis = typename Basis::FlatBasis;
+  using BaseDisp  = Ikarus::ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
+  using BaseAD    = Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, typename Basis::FlatBasis>;
+  using BaseAD::localView;
   using BaseAD::size;
-  using LocalView         = typename Basis::LocalView;
+  using LocalView         = typename FlatBasis::LocalView;
   using FERequirementType = typename BaseAD::FERequirementType;
 
   KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
                  double p_thickness)
-      : BaseDisp(basis, element),
-        BaseAD(basis, element),
-        localView_{basis.localView()},
+      : BaseDisp(basis.flat(), element),
+        BaseAD(basis.flat(), element),
         Emodul{p_Emodul},
         nu{p_nu},
         thickness{p_thickness} {
-    localView_.bind(element);
-    geometry_.emplace(localView_.element().geometry());
+    this->localView().bind(element);
+    geometry_.emplace(this->localView().element().geometry());
   }
 
   static Eigen::Matrix<double, 3, 3> constitutiveMatrix(double Emod, double p_nu, double p_thickness) {
@@ -74,8 +78,8 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
     const auto &lambda  = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D        = constitutiveMatrix(Emodul, nu, thickness);
     Scalar energy       = 0.0;
-    auto &ele           = localView_.element();
-    auto &fe            = localView_.tree().finiteElement();
+    auto &ele           = this->localView().element();
+    auto &fe            = this->localView().tree().finiteElement();
     Eigen::VectorX<Scalar> wNodal;
     wNodal.setZero(fe.size());
     Dune::CachedLocalBasis localBasis(fe.localBasis());
@@ -83,7 +87,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
 
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     for (auto i = 0U; i < fe.size(); ++i)
-      wNodal(i) = dx[i] + wGlobal[localView_.index(localView_.tree().localIndex(i))[0]];
+      wNodal(i) = dx[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
 
     /// Calculate Kirchhoff plate energy
     for (auto &&[gpIndex, gp] : localBasis.viewOverIntegrationPoints()) {
@@ -115,7 +119,7 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
     /// Clamp boundary using penalty method
     const double penaltyFactor = 1e8;
     if (ele.hasBoundaryIntersections())
-      for (auto &intersection : intersections(localView_.globalBasis().gridView(), ele))
+      for (auto &intersection : intersections(this->localView().globalBasis().gridView(), ele))
         if (intersection.boundary()) {
           const auto &rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
           Eigen::MatrixX2d dN_xi_eta;
@@ -140,8 +144,6 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
   }
 
  private:
-  LocalView localView_;
-
   /// Dune::Geometry<...> is not copy assignable, see https://gitlab.dune-project.org/core/dune-grid/-/issues/140,
   /// Thus, we wrap it inside a std::optional
   std::optional<typename LocalView::Element::Geometry> geometry_;
@@ -151,7 +153,9 @@ struct KirchhoffPlate : Ikarus::ScalarFieldFE<Basis>, Ikarus::AutoDiffFE<Kirchho
   double thickness;
 };
 
-int main() {
+int main(int argc, char **argv) {
+  Ikarus::init(argc, argv);
+
   /// Create 2D nurbs grid
   using namespace Ikarus;
   constexpr int griddim                                    = 2;
@@ -186,27 +190,28 @@ int main() {
     //    draw(gridView);
     using namespace Dune::Functions::BasisFactory;
     /// Create nurbs basis with extracted preBase from grid
-    auto basis = Ikarus::makeConstSharedBasis(gridView, gridView.impl().getPreBasis());
+    auto basis = Ikarus::makeBasis(gridView, gridView.impl().getPreBasis());
     /// Fix complete boundary (simply supported plate)
-    Ikarus::DirichletValues dirichletValues(basis);
+    auto basisP = std::make_shared<const decltype(basis)>(basis);
+    Ikarus::DirichletValues dirichletValues(basisP->flat());
     dirichletValues.fixBoundaryDOFs(
         [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
     /// Create finite elements
-    auto localView         = basis->localView();
+    auto localView         = basis.flat().localView();
     const double Emod      = 2.1e8;
     const double nu        = 0.3;
     const double thickness = 0.1;
-    std::vector<KirchhoffPlate<typename decltype(basis)::element_type>> fes;
+    std::vector<KirchhoffPlate<decltype(basis)>> fes;
     for (auto &ele : elements(gridView))
-      fes.emplace_back(*basis, ele, Emod, nu, thickness);
+      fes.emplace_back(basis, ele, Emod, nu, thickness);
 
     /// Create assembler
     auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
 
     /// Create non-linear operator with potential energy
     Eigen::VectorXd w;
-    w.setZero(basis->size());
+    w.setZero(basis.flat().size());
 
     double totalLoad = 2000;
 
@@ -231,7 +236,7 @@ int main() {
     w -= solver.solve(R);
 
     // Output solution to vtk
-    auto wGlobalFunc = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(*basis, w);
+    auto wGlobalFunc = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(basis.flat(), w);
     Dune::SubsamplingVTKWriter vtkWriter(gridView, Dune::refinementLevels(2));
     vtkWriter.addVertexData(wGlobalFunc, Dune::VTK::FieldInfo("w", Dune::VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("iks004_kirchhoffPlate");
@@ -258,7 +263,8 @@ int main() {
     // clamped sol http://faculty.ce.berkeley.edu/rlt/reports/clamp.pdf
     const double wCenterClamped = 1.265319087 / (D / (totalLoad * Dune::power(Lx, 4)) * 1000.0);
     //    std::cout << wCenterClamped << std::endl;
-    auto wGlobalFunction = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(*basis, w);
+    auto wGlobalFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(basis.flat(), w);
     auto wGlobalAnalyticFunction = Dune::Functions::makeAnalyticGridViewFunction(wAna, gridView);
     auto localw                  = localFunction(wGlobalFunction);
     auto localwAna               = localFunction(wGlobalAnalyticFunction);
@@ -282,8 +288,8 @@ int main() {
     }
 
     l2_error = std::sqrt(l2_error);
-    std::cout << "l2_error: " << l2_error << " Dofs:: " << basis->size() << std::endl;
-    dofsVec.push_back(basis->size());
+    std::cout << "l2_error: " << l2_error << " Dofs:: " << basis.flat().size() << std::endl;
+    dofsVec.push_back(basis.flat().size());
     l2Evcector.push_back(l2_error);
     grid.globalRefine(1);
   }

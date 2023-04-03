@@ -14,6 +14,7 @@
 #include <Eigen/Dense>
 
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/init.hh>
 
 void boundaryUnawareRefinedCircle() {
   std::cout << std::endl << "Comparing the values of Pi with global refinements of unit circle" << std::endl;
@@ -61,7 +62,8 @@ void boundaryUnawareRefinedCircle() {
       for (auto &intersection : intersections(gridView, element))
         if (intersection.boundary()) circumference += intersection.geometry().volume();
 
-  std::cout << std::setprecision(10) << "Circumference: " << circumference << " Pi: " << std::numbers::pi << std::endl;
+  std::cout << std::setprecision(10) << "Circumference/2: " << circumference / 2 << " Pi: " << std::numbers::pi
+            << std::endl;
 }
 
 struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
@@ -149,12 +151,12 @@ void boundaryAwareRefinedCircle() {
       for (auto &intersection : intersections(grid->leafGridView(), element))
         if (intersection.boundary()) circumference += intersection.geometry().volume();
 
-  std::cout << std::setprecision(10) << "Circumference: " << circumference / 2 << " Pi: " << std::numbers::pi
+  std::cout << std::setprecision(10) << "Circumference/2: " << circumference / 2 << " Pi: " << std::numbers::pi
             << std::endl;
 }
 
 int main(int argc, char **argv) {
-  Dune::MPIHelper::instance(argc, argv);
+  Ikarus::init(argc, argv);
   boundaryUnawareRefinedCircle();
   boundaryAwareRefinedCircle();
 }

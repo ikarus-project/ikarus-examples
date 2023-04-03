@@ -19,7 +19,9 @@
 #include <Eigen/Core>
 
 #include <ikarus/solver/linearSolver/linearSolver.hh>
+#include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/init.hh>
 using namespace Dune::Functions::BasisFactory;
 using namespace Dune::Functions;
 using namespace Dune::Functions::BasisBuilder;
@@ -96,17 +98,17 @@ unsigned int getGlobalDofIdImpl(const auto &basis, const double position) {
 unsigned int getGlobalDofId(TimoshenkoBeam requestedQuantity, const auto &basis, const double position) {
   using namespace Dune::Indices;
   if (requestedQuantity == TimoshenkoBeam::w)
-    return getGlobalDofIdImpl(subspaceBasis(basis, _0), position);
+    return getGlobalDofIdImpl(subspaceBasis(basis.flat(), _0), position);
   else if (requestedQuantity == TimoshenkoBeam::phi)
-    return getGlobalDofIdImpl(subspaceBasis(basis, _1), position);
+    return getGlobalDofIdImpl(subspaceBasis(basis.flat(), _1), position);
   else
     throw std::runtime_error("The requested quantity is not supported");
 }
 
 void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, double EI, double GA, double L, double F) {
   using namespace Dune::Indices;
-  auto wGlobal   = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis, _0), d_glob);
-  auto phiGlobal = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis, _1), d_glob);
+  auto wGlobal   = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis.flat(), _0), d_glob);
+  auto phiGlobal = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis.flat(), _1), d_glob);
 
   auto wSol = [&](auto x) {
     return -F * Dune::power(x[0], 3) / (6.0 * EI) + L * F * Dune::power(x[0], 2) / (2.0 * EI) + F * x[0] / GA;
@@ -123,7 +125,7 @@ void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, doub
   hold(ax1, true);
   hold(ax2, true);
 
-  auto localView        = basis.localView();
+  auto localView        = basis.flat().localView();
   auto wLocal           = localFunction(wGlobal);
   auto phiLocal         = localFunction(phiGlobal);
   auto wLocalAnalytic   = localFunction(wGlobalAnalytic);
@@ -182,12 +184,11 @@ void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrder
   // draw(gridView);
 
   /// Basis  with different orders for w (first) and phi (second)
-  auto basis
-      = makeBasis(gridView, composite(lagrange(polynomialOrderW), lagrange(polynomialOrderPhi), FlatLexicographic()));
-  auto localView = basis.localView();
+  auto basis     = Ikarus::makeBasis(gridView, composite(lagrange(polynomialOrderW), lagrange(polynomialOrderPhi)));
+  auto localView = basis.flat().localView();
 
   /// global stiffness matrix and force vector
-  auto numDofs               = basis.size();
+  auto numDofs               = basis.flat().size();
   Eigen::VectorXd FExtGlobal = Eigen::VectorXd::Zero(numDofs);
   Eigen::MatrixXd KGlobal    = Eigen::MatrixXd::Zero(numDofs, numDofs);
   Eigen::MatrixXd KLocal;
@@ -234,7 +235,8 @@ void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrder
   plotDeformedTimoschenkoBeam(gridView, basis, dGlobal, EI, GA, L, F);
 }
 
-int main() {
+int main(int argc, char **argv) {
+  Ikarus::init(argc, argv);
   exampleTimoshenkoBeam(1, 1, 10);
   exampleTimoshenkoBeam(2, 1, 10);
   exampleTimoshenkoBeam(2, 2, 10);

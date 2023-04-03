@@ -25,8 +25,10 @@
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
+#include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>
+#include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 
 using namespace Ikarus;
@@ -34,7 +36,7 @@ using namespace Dune::Indices;
 
 int main(int argc, char **argv) {
   auto start = std::chrono::high_resolution_clock::now();
-  Dune::MPIHelper::instance(argc, argv);
+  Ikarus::init(argc, argv);
   constexpr int gridDim     = 2;
   double lambdaLoad         = 1;
   constexpr int basis_order = 1;
@@ -85,17 +87,18 @@ int main(int argc, char **argv) {
       auto numberOfEASParameters = easSet(nep);
 
       using namespace Dune::Functions::BasisFactory;
-      auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved()));
+      auto basis = Ikarus::makeBasis(gridView, power<gridDim>(lagrange<basis_order>()));
 
       /// clamp left-hand side
-      Ikarus::DirichletValues dirichletValues(basis);
+      auto basisP = std::make_shared<const decltype(basis)>(basis);
+      Ikarus::DirichletValues dirichletValues(basisP->flat());
       dirichletValues.fixBoundaryDOFs(
           [&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
             if (std::abs(intersection.geometry().center()[0]) < 1e-8)
               dirichletFlags[localView.index(localIndex)] = true;
           });
 
-      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<typename decltype(basis)::element_type>>> fes;
+      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(basis)>>> fes;
 
       /// function for volume load- here: returns zero
       auto volumeLoad = [](auto &globalCoord, auto &lamb) {
@@ -133,8 +136,7 @@ int main(int argc, char **argv) {
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
       for (auto &element : elements(gridView)) {
-        auto localView = basis->localView();
-        fes.emplace_back(*basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
+        fes.emplace_back(basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
         fes.back().setEASType(numberOfEASParameters);
       }
 
@@ -154,7 +156,7 @@ int main(int argc, char **argv) {
         return sparseAssembler.getVector(req);
       };
 
-      Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis->size());
+      Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
 
       auto startAssembly    = std::chrono::high_resolution_clock::now();
       auto nonLinOp         = Ikarus::NonLinearOperator(linearAlgebraFunctions(residualFunction, KFunction),
@@ -162,7 +164,7 @@ int main(int argc, char **argv) {
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
-                   durationAssembly.count(), numberOfEASParameters, basis->size());
+                   durationAssembly.count(), numberOfEASParameters, basis.flat().size());
       ;
       timeVec.push_back(durationAssembly.count());
       const auto &K    = nonLinOp.derivative();
@@ -181,12 +183,12 @@ int main(int argc, char **argv) {
 
       /// Postprocess
       auto dispGlobalFunc
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(*basis, D_Glob);
+          = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), D_Glob);
       Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
       vtkWriter.addVertexData(dispGlobalFunc,
                               Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
       vtkWriter.write("iks008_cooksMembrane" + std::to_string(ref));
-      auto localView = basis->localView();
+      auto localView = basis.flat().localView();
       auto localw    = localFunction(dispGlobalFunc);
       double uy_fe   = 0.0;
       Eigen::Vector2d req_pos;
@@ -202,13 +204,13 @@ int main(int argc, char **argv) {
           }
         }
       }
-      dofsVec.push_back(basis->size());
+      dofsVec.push_back(basis.flat().size());
       dispVec.push_back(uy_fe);
 
       auto stop     = std::chrono::high_resolution_clock::now();
       auto duration = duration_cast<std::chrono::milliseconds>(stop - start);
       spdlog::info("The total execution took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
-                   duration.count(), numberOfEASParameters, basis->size());
+                   duration.count(), numberOfEASParameters, basis.flat().size());
       grid->globalRefine(1);
     }
 
