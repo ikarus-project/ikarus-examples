@@ -27,26 +27,31 @@
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
+#include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>
 #include <ikarus/utils/eigenDuneTransformations.hh>
+#include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/genericControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
 using namespace Ikarus;
 template <typename Basis>
-struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Basis> {
-  using BaseDisp = Ikarus::PowerBasisFE<Basis>;
-  using BaseAD   = Ikarus::AutoDiffFE<Truss<Basis>, Basis>;
+struct Truss : Ikarus::PowerBasisFE<typename Basis::FlatBasis>,
+               Ikarus::AutoDiffFE<Truss<Basis>, typename Basis::FlatBasis> {
+  using FlatBasis = typename Basis::FlatBasis;
+  using BaseDisp  = Ikarus::PowerBasisFE<FlatBasis>;
+  using BaseAD    = Ikarus::AutoDiffFE<Truss<Basis>, FlatBasis>;
+  using BaseAD::localView;
   using BaseAD::size;
   friend BaseAD;
-  using LocalView         = typename Basis::LocalView;
+  using LocalView         = typename FlatBasis::LocalView;
   using FERequirementType = typename BaseAD::FERequirementType;
   using Traits            = TraitsFromLocalView<LocalView>;
   Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
-      : BaseDisp(basis, element), BaseAD(basis, element), localView_{basis.localView()}, EA{p_EA} {
-    localView_.bind(element);
+      : BaseDisp(basis.flat(), element), BaseAD(basis.flat(), element), EA{p_EA} {
+    this->localView().bind(element);
   }
 
  private:
@@ -55,7 +60,7 @@ struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Bas
     const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
-    auto &ele     = localView_.element();
+    auto &ele     = this->localView().element();
     const auto X1 = Dune::toEigen(ele.geometry().corner(0));
     const auto X2 = Dune::toEigen(ele.geometry().corner(1));
 
@@ -63,8 +68,8 @@ struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Bas
     u.setZero();
     for (int i = 0; i < 2; ++i)
       for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-        u.col(i)(k2)
-            = dx[Traits::worlddim * i + k2] + d[localView_.index(localView_.tree().child(k2).localIndex(i))[0]];
+        u.col(i)(k2) = dx[Traits::worlddim * i + k2]
+                       + d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
 
     const Eigen::Vector2<Scalar> x1 = X1 + u.col(0);
     const Eigen::Vector2<Scalar> x2 = X2 + u.col(1);
@@ -78,11 +83,11 @@ struct Truss : Ikarus::PowerBasisFE<Basis>, Ikarus::AutoDiffFE<Truss<Basis>, Bas
   }
 
  private:
-  LocalView localView_;
   double EA;
 };
 
-int main() {
+int main(int argc, char **argv) {
+  Ikarus::init(argc, argv);
   /// Construct grid
   Dune::GridFactory<Dune::FoamGrid<1, 2, double>> gridFactory;
   const double h = 1.0;
@@ -98,16 +103,17 @@ int main() {
 
   /// Construct basis
   using namespace Dune::Functions::BasisFactory;
-  auto basis = Ikarus::makeConstSharedBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeBasis(gridView, power<2>(lagrange<1>()));
 
   /// Create finite elements
   const double EA = 100;
-  std::vector<Truss<typename decltype(basis)::element_type>> fes;
+  std::vector<Truss<decltype(basis)>> fes;
   for (auto &ele : elements(gridView))
-    fes.emplace_back(*basis, ele, EA);
+    fes.emplace_back(basis, ele, EA);
 
   /// Collect dirichlet nodes
-  Ikarus::DirichletValues dirichletValues(basis);
+  auto basisP = std::make_shared<const decltype(basis)>(basis);
+  Ikarus::DirichletValues dirichletValues(basisP->flat());
   dirichletValues.fixBoundaryDOFs(
       [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
 
@@ -117,7 +123,7 @@ int main() {
   /// Create non-linear operator
   double lambda = 0;
   Eigen::VectorXd d;
-  d.setZero(basis->size());
+  d.setZero(basis.flat().size());
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
@@ -160,8 +166,8 @@ int main() {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter
-      = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
+  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>>(
+      basis.flat(), d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("iks007_vonMisesTruss");
   nr->subscribeAll(nonLinearSolverObserver);

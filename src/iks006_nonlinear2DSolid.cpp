@@ -27,8 +27,10 @@
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/solver/nonLinearSolver/trustRegion.hh>
 #include <ikarus/utils/algorithms.hh>
+#include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/duneUtilities.hh>
+#include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
@@ -45,7 +47,7 @@
 #define solverType 0
 
 int main(int argc, char **argv) {
-  Dune::MPIHelper::instance(argc, argv);
+  Ikarus::init(argc, argv);
   using namespace Ikarus;
   constexpr int gridDim = 2;
 
@@ -117,27 +119,27 @@ int main(int argc, char **argv) {
   using namespace Dune::Functions::BasisFactory;
 
 #if gridType == 0 or gridType == 1
-  auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved()));
+  auto basis = Ikarus::makeBasis(gridView, power<gridDim>(lagrange<1>()));
 #endif
 #if (gridType == 2)
-  auto basis = Ikarus::makeConstSharedBasis(gridView, power<gridDim>(gridView.impl().getPreBasis(), FlatInterleaved()));
+  auto basis = Ikarus::makeBasis(gridView, power<gridDim>(gridView.impl().getPreBasis()));
 #endif
 
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
   std::cout << gridView.size(1) << " edges" << std::endl;
   std::cout << gridView.size(0) << " elements" << std::endl;
-  std::cout << basis->size() << " Dofs" << std::endl;
+  std::cout << basis.flat().size() << " Dofs" << std::endl;
 
   //  draw(gridView);
 
-  auto localView = basis->localView();
+  auto localView = basis.flat().localView();
 
   auto matParameter = Ikarus::toLamesFirstParameterAndShearModulus({.emodul = 1000, .nu = 0.3});
 
   Ikarus::StVenantKirchhoff matSVK(matParameter);
   auto reducedMat = plainStress(matSVK, 1e-8);
-  std::vector<Ikarus::NonLinearElasticityFE<typename decltype(basis)::element_type, decltype(reducedMat)>> fes;
+  std::vector<Ikarus::NonLinearElasticityFE<decltype(basis), decltype(reducedMat)>> fes;
 
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
@@ -153,9 +155,10 @@ int main(int argc, char **argv) {
   };
 
   for (auto &element : elements(gridView))
-    fes.emplace_back(*basis, element, reducedMat, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
+    fes.emplace_back(basis, element, reducedMat, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
 
-  Ikarus::DirichletValues dirichletValues(basis);
+  auto basisP = std::make_shared<const decltype(basis)>(basis);
+  Ikarus::DirichletValues dirichletValues(basisP->flat());
 
   dirichletValues.fixBoundaryDOFs([&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
     if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
@@ -164,7 +167,7 @@ int main(int argc, char **argv) {
   auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   Eigen::VectorXd d;
-  d.setZero(basis->size());
+  d.setZero(basis.flat().size());
   double lambda = 0.0;
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
@@ -208,8 +211,8 @@ int main(int argc, char **argv) {
 
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
-  auto vtkWriter
-      = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(*basis)>>>(*basis, d, 2);
+  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>>(
+      basis.flat(), d, 2);
   vtkWriter->setFileNamePrefix("iks006_nonlinear2DSolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   nr->subscribeAll(nonLinearSolverObserver);
