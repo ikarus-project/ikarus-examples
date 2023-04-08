@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
   auto sparseFlatAssembler = SparseFlatAssembler(fes, dirichletValues);
   auto denseFlatAssembler  = DenseFlatAssembler(fes, dirichletValues);
 
-  /// Create non-linear operator
+  /// Create function for external forces and stiffness matrix
   double lambda = 0;
   Eigen::VectorXd d;
   d.setZero(basis.flat().size());
