@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
       for (auto &element : elements(gridView)) {
-        fes.emplace_back(basis, element, E, nu, &volumeLoad, &neumannBoundary, &neumannBoundaryLoad);
+        fes.emplace_back(basis, element, E, nu, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
         fes.back().setEASType(numberOfEASParameters);
       }
 
