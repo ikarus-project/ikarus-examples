@@ -21,7 +21,7 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/controlRoutines/loadControl.hh>
 #include <ikarus/finiteElements/feRequirements.hh>
-#include <ikarus/finiteElements/mechanics/nonLinearElasticityFE.hh>
+#include <ikarus/finiteElements/mechanics/nonLinearElastic.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
@@ -138,8 +138,8 @@ int main(int argc, char **argv) {
   auto matParameter = Ikarus::toLamesFirstParameterAndShearModulus({.emodul = 1000, .nu = 0.3});
 
   Ikarus::StVenantKirchhoff matSVK(matParameter);
-  auto reducedMat = plainStress(matSVK, 1e-8);
-  std::vector<Ikarus::NonLinearElasticityFE<decltype(basis), decltype(reducedMat)>> fes;
+  auto reducedMat = planeStress(matSVK, 1e-8);
+  std::vector<Ikarus::NonLinearElastic<decltype(basis), decltype(reducedMat)>> fes;
 
   auto volumeLoad = [](auto &globalCoord, auto &lamb) {
     Eigen::Vector2d fext;
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
   };
 
   for (auto &element : elements(gridView))
-    fes.emplace_back(basis, element, reducedMat, &neumannBoundary, neumannBoundaryLoad, volumeLoad);
+    fes.emplace_back(basis, element, reducedMat, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
 
   auto basisP = std::make_shared<const decltype(basis)>(basis);
   Ikarus::DirichletValues dirichletValues(basisP->flat());
