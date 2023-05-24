@@ -37,24 +37,29 @@
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
 using namespace Ikarus;
-template <typename Basis>
-struct Truss : Ikarus::PowerBasisFE<typename Basis::FlatBasis>,
-               Ikarus::AutoDiffFE<Truss<Basis>, typename Basis::FlatBasis> {
-  using FlatBasis = typename Basis::FlatBasis;
-  using BaseDisp  = Ikarus::PowerBasisFE<FlatBasis>;
-  using BaseAD    = Ikarus::AutoDiffFE<Truss<Basis>, FlatBasis>;
-  using BaseAD::localView;
-  using BaseAD::size;
-  friend BaseAD;
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
+class Truss : Ikarus::PowerBasisFE<typename Basis_::FlatBasis> {
+  using Basis             = Basis_;
+  using FlatBasis         = typename Basis::FlatBasis;
+  using BaseDisp          = Ikarus::PowerBasisFE<FlatBasis>;
   using LocalView         = typename FlatBasis::LocalView;
-  using FERequirementType = typename BaseAD::FERequirementType;
-  using Traits            = TraitsFromLocalView<LocalView>;
+  using Element           = typename LocalView::Element;
+  using Geometry          = typename Element::Geometry;
+  using FERequirementType = FERequirements_;
+  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
   Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
-      : BaseDisp(basis.flat(), element), BaseAD(basis.flat(), element), EA{p_EA} {
+      : BaseDisp(basis.flat(), element), EA{p_EA} {
     this->localView().bind(element);
   }
 
- private:
+  template <typename ScalarType = double>
+  ScalarType calculateScalar(const FERequirementType &par) const {
+    Eigen::VectorXd dx(this->localView().size());
+    dx.setZero();
+    return calculateScalarImpl(par, dx);
+  }
+
+ protected:
   template <class Scalar>
   Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
     const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
@@ -107,7 +112,7 @@ int main(int argc, char **argv) {
 
   /// Create finite elements
   const double EA = 100;
-  std::vector<Truss<decltype(basis)>> fes;
+  std::vector<AutoDiffFE<Truss<decltype(basis)>>> fes;
   for (auto &ele : elements(gridView))
     fes.emplace_back(basis, ele, EA);
 

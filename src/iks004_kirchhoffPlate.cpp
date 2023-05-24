@@ -38,24 +38,19 @@
 #include <ikarus/utils/observer/loadControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
-template <typename Basis>
-struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
-                        public Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, typename Basis::FlatBasis> {
-  using FlatBasis = typename Basis::FlatBasis;
-  using BaseDisp  = Ikarus::ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
-  using BaseAD    = Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, typename Basis::FlatBasis>;
-  using BaseAD::localView;
-  using BaseAD::size;
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
+class KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis_::FlatBasis> {
+  using Basis             = Basis_;
+  using FlatBasis         = typename Basis::FlatBasis;
+  using BaseDisp          = Ikarus::ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
   using LocalView         = typename FlatBasis::LocalView;
-  using FERequirementType = typename BaseAD::FERequirementType;
+  using Element           = typename LocalView::Element;
+  using Geometry          = typename Element::Geometry;
+  using FERequirementType = FERequirements_;
 
   KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
                  double p_thickness)
-      : BaseDisp(basis.flat(), element),
-        BaseAD(basis.flat(), element),
-        Emodul{p_Emodul},
-        nu{p_nu},
-        thickness{p_thickness} {
+      : BaseDisp(basis.flat(), element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
     this->localView().bind(element);
     geometry_.emplace(this->localView().element().geometry());
   }
@@ -72,6 +67,14 @@ struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
     return D;
   }
 
+  template <typename ScalarType = double>
+  ScalarType calculateScalar(const FERequirementType &par) const {
+    Eigen::VectorXd dx(this->localView().size());
+    dx.setZero();
+    return calculateScalarImpl(par, dx);
+  }
+
+ protected:
   template <class Scalar>
   [[nodiscard]] Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
     const auto &wGlobal = par.getGlobalSolution(Ikarus::FESolutions::displacement);
@@ -202,7 +205,7 @@ int main(int argc, char **argv) {
     const double Emod      = 2.1e8;
     const double nu        = 0.3;
     const double thickness = 0.1;
-    std::vector<KirchhoffPlate<decltype(basis)>> fes;
+    std::vector<AutoDiffFE<KirchhoffPlate<decltype(basis)>>> fes;
     for (auto &ele : elements(gridView))
       fes.emplace_back(basis, ele, Emod, nu, thickness);
 
