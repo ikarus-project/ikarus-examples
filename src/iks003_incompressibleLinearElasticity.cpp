@@ -63,9 +63,9 @@ struct Solid {
   }
 
   [[nodiscard]] constexpr int size() const { return localView_.size(); }
-  const Element& gridElement() { return localView_.element(); }
-  const LocalView& localView() const { return localView_; }
-  LocalView& localView() { return localView_; }
+  const Element &gridElement() { return localView_.element(); }
+  const LocalView &localView() const { return localView_; }
+  LocalView &localView() { return localView_; }
 
  protected:
   template <class ScalarType>
@@ -83,14 +83,12 @@ struct Solid {
     disp.setZero(Eigen::NoChange, feDisp.size());
     for (auto i = 0U; i < feDisp.size(); ++i)
       for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-        disp.col(i)(k2)
-            = dx[i * 2 + k2] + d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
+        disp.col(i)(k2) = dx[i * 2 + k2] + d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
 
     Eigen::Vector<ScalarType, Eigen::Dynamic> pN;
     pN.setZero(fePressure.size());
     for (auto i = 0U; i < fePressure.size(); ++i)
-      pN[i] = dx[Traits::mydim * feDisp.size() + i]
-              + d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
+      pN[i] = dx[Traits::mydim * feDisp.size() + i] + d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
 
     ScalarType energy = 0.0;
 
