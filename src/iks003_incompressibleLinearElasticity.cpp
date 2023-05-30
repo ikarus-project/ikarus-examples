@@ -23,6 +23,7 @@
 
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
+#include <ikarus/finiteElements/physicsHelper.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -33,33 +34,34 @@
 
 using namespace Ikarus;
 using namespace Dune::Indices;
-template <typename Basis>
-struct Solid : public Ikarus::AutoDiffFE<Solid<Basis>, typename Basis::FlatBasis> {
-  using BaseAD = Ikarus::AutoDiffFE<Solid<Basis>, typename Basis::FlatBasis>;
-  friend BaseAD;
-  using BaseAD::localView;
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
+struct Solid {
+ public:
+  using Basis             = Basis_;
   using FlatBasis         = typename Basis::FlatBasis;
   using LocalView         = typename FlatBasis::LocalView;
-  using FERequirementType = typename BaseAD::FERequirementType;
-  using Traits            = TraitsFromLocalView<LocalView>;
+  using Element           = typename LocalView::Element;
+  using Geometry          = typename Element::Geometry;
+  using FERequirementType = FERequirements_;
+  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
   Solid(const Basis &basis, const typename LocalView::Element &element, double emod, double nu)
-      : BaseAD(basis.flat(), element), emod_{emod}, nu_{nu} {
-    this->localView().bind(element);
+      : localView_{basis.flat().localView()}, emod_{emod}, nu_{nu} {
+    localView_.bind(element);
     mu_       = emod_ / (2 * (1 + nu_));
     lambdaMat = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
   using GlobalIndex = typename LocalView::MultiIndex;
   void globalFlatIndices(std::vector<GlobalIndex> &globalIndices) const {
-    const auto &feDisp = this->localView().tree().child(_0, 0).finiteElement();
+    const auto &feDisp = localView_.tree().child(_0, 0).finiteElement();
     for (size_t i = 0; i < feDisp.size(); ++i) {
       for (int j = 0; j < Traits::worlddim; ++j) {
-        globalIndices.push_back(this->localView().index((this->localView().tree().child(_0, j).localIndex(i))));
+        globalIndices.push_back(localView_.index((localView_.tree().child(_0, j).localIndex(i))));
       }
     }
-    const auto &fePressure = this->localView().tree().child(_1).finiteElement();
+    const auto &fePressure = localView_.tree().child(_1).finiteElement();
     for (size_t i = 0; i < fePressure.size(); ++i) {
-      globalIndices.push_back(this->localView().index((this->localView().tree().child(_1).localIndex(i))));
+      globalIndices.push_back(localView_.index((localView_.tree().child(_1).localIndex(i))));
     }
   }
 
@@ -69,10 +71,10 @@ struct Solid : public Ikarus::AutoDiffFE<Solid<Basis>, typename Basis::FlatBasis
                                                const Eigen::VectorX<ScalarType> &dx) const {
     const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(Ikarus::FEParameter::loadfactor);
-    Eigen::VectorX<ScalarType> localDisp(this->localView().size());
+    Eigen::VectorX<ScalarType> localDisp(localView_.size());
     localDisp.setZero();
-    auto &displacementNode = this->localView().tree().child(_0, 0);
-    auto &pressureNode     = this->localView().tree().child(_1);
+    auto &displacementNode = localView_.tree().child(_0, 0);
+    auto &pressureNode     = localView_.tree().child(_1);
     const auto &feDisp     = displacementNode.finiteElement();
     const auto &fePressure = pressureNode.finiteElement();
     Eigen::Matrix<ScalarType, Traits::dimension, Eigen::Dynamic> disp;
@@ -80,19 +82,19 @@ struct Solid : public Ikarus::AutoDiffFE<Solid<Basis>, typename Basis::FlatBasis
     for (auto i = 0U; i < feDisp.size(); ++i)
       for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
         disp.col(i)(k2)
-            = dx[i * 2 + k2] + d[this->localView().index(this->localView().tree().child(_0, k2).localIndex(i))[0]];
+            = dx[i * 2 + k2] + d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
 
     Eigen::Vector<ScalarType, Eigen::Dynamic> pN;
     pN.setZero(fePressure.size());
     for (auto i = 0U; i < fePressure.size(); ++i)
       pN[i] = dx[Traits::mydim * feDisp.size() + i]
-              + d[this->localView().index(this->localView().tree().child(_1).localIndex(i))[0]];
+              + d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
 
     ScalarType energy = 0.0;
 
     const int order  = 2 * (feDisp.localBasis().order());
-    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(this->localView().element().type(), order);
-    const auto geo   = this->localView().element().geometry();
+    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView_.element().type(), order);
+    const auto geo   = localView_.element().geometry();
     Dune::CachedLocalBasis localBasisDisp(feDisp.localBasis());
     Dune::CachedLocalBasis localBasisPressure(fePressure.localBasis());
     Eigen::Matrix<double, Eigen::Dynamic, Traits::mydim> dNdisp;
@@ -126,6 +128,7 @@ struct Solid : public Ikarus::AutoDiffFE<Solid<Basis>, typename Basis::FlatBasis
   }
 
  private:
+  LocalView localView_;
   double emod_;
   double nu_;
   double mu_;

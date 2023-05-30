@@ -24,6 +24,7 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/scalarFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/finiteElements/physicsHelper.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
@@ -38,15 +39,18 @@
 #include <ikarus/utils/observer/loadControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
+using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis_::FlatBasis> {
+class KirchhoffPlate : public ScalarFieldFE<typename Basis_::FlatBasis> {
+ public:
   using Basis             = Basis_;
   using FlatBasis         = typename Basis::FlatBasis;
-  using BaseDisp          = Ikarus::ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
+  using BaseDisp          = ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
   using LocalView         = typename FlatBasis::LocalView;
   using Element           = typename LocalView::Element;
   using Geometry          = typename Element::Geometry;
   using FERequirementType = FERequirements_;
+  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
 
   KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
                  double p_thickness)

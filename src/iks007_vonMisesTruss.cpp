@@ -23,6 +23,7 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/powerBasisFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/finiteElements/physicsHelper.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
@@ -38,7 +39,8 @@
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class Truss : Ikarus::PowerBasisFE<typename Basis_::FlatBasis> {
+class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
+ public:
   using Basis             = Basis_;
   using FlatBasis         = typename Basis::FlatBasis;
   using BaseDisp          = Ikarus::PowerBasisFE<FlatBasis>;
