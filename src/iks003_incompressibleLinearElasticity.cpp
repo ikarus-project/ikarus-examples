@@ -15,7 +15,6 @@
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
-#include <dune/localfefunctions/impl/standardLocalFunction.hh>
 
 #include <Eigen/Core>
 
@@ -28,8 +27,6 @@
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneUtilities.hh>
-#include <ikarus/utils/eigenDuneTransformations.hh>
 #include <ikarus/utils/init.hh>
 
 using namespace Ikarus;
@@ -65,7 +62,12 @@ struct Solid {
     }
   }
 
- private:
+  [[nodiscard]] constexpr int size() const { return localView_.size(); }
+  const Element& gridElement() { return localView_.element(); }
+  const LocalView& localView() const { return localView_; }
+  LocalView& localView() { return localView_; }
+
+ protected:
   template <class ScalarType>
   [[nodiscard]] ScalarType calculateScalarImpl(const FERequirementType &par,
                                                const Eigen::VectorX<ScalarType> &dx) const {
@@ -162,7 +164,7 @@ int main(int argc, char **argv) {
   /// Create finite elements
   const double Emod = 2.1e1;
   const double nu   = 0.5;
-  std::vector<Solid<decltype(basis)>> fes;
+  std::vector<AutoDiffFE<Solid<decltype(basis)>>> fes;
   for (auto &ele : elements(gridView))
     fes.emplace_back(basis, ele, Emod, nu);
 
