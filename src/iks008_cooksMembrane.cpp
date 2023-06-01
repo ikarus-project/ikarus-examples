@@ -158,9 +158,8 @@ int main(int argc, char **argv) {
 
       Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
 
-      auto startAssembly    = std::chrono::high_resolution_clock::now();
-      auto nonLinOp         = Ikarus::NonLinearOperator(linearAlgebraFunctions(residualFunction, KFunction),
-                                                        parameter(D_Glob, lambdaLoad));
+      auto startAssembly = std::chrono::high_resolution_clock::now();
+      auto nonLinOp = Ikarus::NonLinearOperator(functions(residualFunction, KFunction), parameter(D_Glob, lambdaLoad));
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",

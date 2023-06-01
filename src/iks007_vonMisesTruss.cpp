@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
     return denseFlatAssembler.getMatrix(req);
   };
 
-  auto nonLinOp = Ikarus::NonLinearOperator(linearAlgebraFunctions(RFunction, KFunction), parameter(d, lambda));
+  auto nonLinOp = Ikarus::NonLinearOperator(functions(RFunction, KFunction), parameter(d, lambda));
 
   /// Choose linear solver
   auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::d_LDLT);

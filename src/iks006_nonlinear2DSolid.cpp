@@ -190,8 +190,8 @@ int main(int argc, char **argv) {
     return sparseAssembler.getScalar(req);
   };
 
-  auto nonLinOp = Ikarus::NonLinearOperator(linearAlgebraFunctions(energyFunction, residualFunction, KFunction),
-                                            parameter(d, lambda));
+  auto nonLinOp
+      = Ikarus::NonLinearOperator(functions(energyFunction, residualFunction, KFunction), parameter(d, lambda));
 
   auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::sd_UmfPackLU);
 
