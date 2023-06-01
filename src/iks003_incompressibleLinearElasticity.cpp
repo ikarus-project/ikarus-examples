@@ -62,6 +62,8 @@ struct Solid {
     }
   }
 
+  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
+
   [[nodiscard]] constexpr int size() const { return localView_.size(); }
   const Element &gridElement() { return localView_.element(); }
   const LocalView &localView() const { return localView_; }
@@ -69,8 +71,8 @@ struct Solid {
 
  protected:
   template <class ScalarType>
-  [[nodiscard]] ScalarType calculateScalarImpl(const FERequirementType &par,
-                                               const Eigen::VectorX<ScalarType> &dx) const {
+  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
+                                                         = std::nullopt) const -> ScalarType {
     const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(Ikarus::FEParameter::loadfactor);
     Eigen::VectorX<ScalarType> localDisp(localView_.size());
@@ -81,14 +83,24 @@ struct Solid {
     const auto &fePressure = pressureNode.finiteElement();
     Eigen::Matrix<ScalarType, Traits::dimension, Eigen::Dynamic> disp;
     disp.setZero(Eigen::NoChange, feDisp.size());
-    for (auto i = 0U; i < feDisp.size(); ++i)
-      for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-        disp.col(i)(k2) = dx[i * 2 + k2] + d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
-
     Eigen::Vector<ScalarType, Eigen::Dynamic> pN;
     pN.setZero(fePressure.size());
-    for (auto i = 0U; i < fePressure.size(); ++i)
-      pN[i] = dx[Traits::mydim * feDisp.size() + i] + d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
+
+    if (dx) {
+      for (auto i = 0U; i < feDisp.size(); ++i)
+        for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
+          disp.col(i)(k2) = dx.value()[i * Traits::mydim + k2]
+                            + d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
+      for (auto i = 0U; i < fePressure.size(); ++i)
+        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i]
+                + d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
+    } else {
+      for (auto i = 0U; i < feDisp.size(); ++i)
+        for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
+          disp.col(i)(k2) = d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
+      for (auto i = 0U; i < fePressure.size(); ++i)
+        pN[i] = d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
+    }
 
     ScalarType energy = 0.0;
 

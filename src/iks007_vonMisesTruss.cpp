@@ -54,16 +54,12 @@ class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
     this->localView().bind(element);
   }
 
-  template <typename ScalarType = double>
-  ScalarType calculateScalar(const FERequirementType &par) const {
-    Eigen::VectorXd dx(this->localView().size());
-    dx.setZero();
-    return calculateScalarImpl(par, dx);
-  }
+  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
 
  protected:
-  template <class Scalar>
-  Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
+  template <typename ScalarType>
+  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
+                                                         = std::nullopt) const -> ScalarType {
     const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
@@ -71,20 +67,26 @@ class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
     const auto X1 = Dune::toEigen(ele.geometry().corner(0));
     const auto X2 = Dune::toEigen(ele.geometry().corner(1));
 
-    Eigen::Matrix<Scalar, Traits::worlddim, 2> u;
+    Eigen::Matrix<ScalarType, Traits::worlddim, 2> u;
     u.setZero();
-    for (int i = 0; i < 2; ++i)
-      for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-        u.col(i)(k2) = dx[Traits::worlddim * i + k2]
-                       + d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+    if (dx) {
+      for (int i = 0; i < 2; ++i)
+        for (int k2 = 0; k2 < Traits::worlddim; ++k2)
+          u.col(i)(k2) = dx.value()[Traits::worlddim * i + k2]
+                         + d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+    } else {
+      for (int i = 0; i < 2; ++i)
+        for (int k2 = 0; k2 < Traits::worlddim; ++k2)
+          u.col(i)(k2) = d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+    }
 
-    const Eigen::Vector2<Scalar> x1 = X1 + u.col(0);
-    const Eigen::Vector2<Scalar> x2 = X2 + u.col(1);
+    const Eigen::Vector2<ScalarType> x1 = X1 + u.col(0);
+    const Eigen::Vector2<ScalarType> x2 = X2 + u.col(1);
 
-    const double LRefsquared = (X1 - X2).squaredNorm();
-    const Scalar lsquared    = (x1 - x2).squaredNorm();
+    const double LRefsquared  = (X1 - X2).squaredNorm();
+    const ScalarType lsquared = (x1 - x2).squaredNorm();
 
-    const Scalar Egl = 0.5 * (lsquared - LRefsquared) / LRefsquared;
+    const ScalarType Egl = 0.5 * (lsquared - LRefsquared) / LRefsquared;
 
     return 0.5 * EA / sqrt(LRefsquared) * Egl * Egl;
   }

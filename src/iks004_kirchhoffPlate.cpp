@@ -71,30 +71,31 @@ class KirchhoffPlate : public ScalarFieldFE<typename Basis_::FlatBasis> {
     return D;
   }
 
-  template <typename ScalarType = double>
-  ScalarType calculateScalar(const FERequirementType &par) const {
-    Eigen::VectorXd dx(this->localView().size());
-    dx.setZero();
-    return calculateScalarImpl(par, dx);
-  }
+  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
 
  protected:
-  template <class Scalar>
-  [[nodiscard]] Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
+  template <typename ScalarType>
+  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
+                                                         = std::nullopt) const -> ScalarType {
     const auto &wGlobal = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda  = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D        = constitutiveMatrix(Emodul, nu, thickness);
-    Scalar energy       = 0.0;
+    ScalarType energy   = 0.0;
     auto &ele           = this->localView().element();
     auto &fe            = this->localView().tree().finiteElement();
-    Eigen::VectorX<Scalar> wNodal;
+    Eigen::VectorX<ScalarType> wNodal;
     wNodal.setZero(fe.size());
     Dune::CachedLocalBasis localBasis(fe.localBasis());
     const auto &rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
 
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
-    for (auto i = 0U; i < fe.size(); ++i)
-      wNodal(i) = dx[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+    if (dx) {
+      for (auto i = 0U; i < fe.size(); ++i)
+        wNodal(i) = dx.value()[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+    } else {
+      for (auto i = 0U; i < fe.size(); ++i)
+        wNodal(i) = wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+    }
 
     /// Calculate Kirchhoff plate energy
     for (auto &&[gpIndex, gp] : localBasis.viewOverIntegrationPoints()) {
@@ -116,9 +117,9 @@ class KirchhoffPlate : public ScalarFieldFE<typename Basis_::FlatBasis> {
         ddN_yy[i] = ddN_etaeta[i] * power(Jinv(1, 1), 2);
         ddN_xy[i] = ddN_xieta[i] * Jinv(0, 0) * Jinv(1, 1);
       }
-      Eigen::Vector<Scalar, 3> kappa;
+      Eigen::Vector<ScalarType, 3> kappa;
       kappa << ddN_xx.dot(wNodal), ddN_yy.dot(wNodal), 2 * ddN_xy.dot(wNodal);
-      Scalar w = N.dot(wNodal);
+      ScalarType w = N.dot(wNodal);
 
       energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry_->integrationElement(gp.position()) * gp.weight();
     }
@@ -140,8 +141,8 @@ class KirchhoffPlate : public ScalarFieldFE<typename Basis_::FlatBasis> {
               dN_x[i] = dN_xi_eta(i, 0) * Jinv(0, 0);
               dN_y[i] = dN_xi_eta(i, 1) * Jinv(1, 1);
             }
-            const Scalar w_x = dN_x.dot(wNodal);
-            const Scalar w_y = dN_y.dot(wNodal);
+            const ScalarType w_x = dN_x.dot(wNodal);
+            const ScalarType w_y = dN_y.dot(wNodal);
 
             energy += 0.0 * 0.5 * penaltyFactor * (w_x * w_x + w_y * w_y);
           }
