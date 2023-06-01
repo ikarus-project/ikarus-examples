@@ -23,6 +23,7 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/powerBasisFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/finiteElements/physicsHelper.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/linearSolver/linearSolver.hh>
@@ -37,26 +38,28 @@
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
 using namespace Ikarus;
-template <typename Basis>
-struct Truss : Ikarus::PowerBasisFE<typename Basis::FlatBasis>,
-               Ikarus::AutoDiffFE<Truss<Basis>, typename Basis::FlatBasis> {
-  using FlatBasis = typename Basis::FlatBasis;
-  using BaseDisp  = Ikarus::PowerBasisFE<FlatBasis>;
-  using BaseAD    = Ikarus::AutoDiffFE<Truss<Basis>, FlatBasis>;
-  using BaseAD::localView;
-  using BaseAD::size;
-  friend BaseAD;
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
+class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
+ public:
+  using Basis             = Basis_;
+  using FlatBasis         = typename Basis::FlatBasis;
+  using BaseDisp          = Ikarus::PowerBasisFE<FlatBasis>;
   using LocalView         = typename FlatBasis::LocalView;
-  using FERequirementType = typename BaseAD::FERequirementType;
-  using Traits            = TraitsFromLocalView<LocalView>;
+  using Element           = typename LocalView::Element;
+  using Geometry          = typename Element::Geometry;
+  using FERequirementType = FERequirements_;
+  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
   Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
-      : BaseDisp(basis.flat(), element), BaseAD(basis.flat(), element), EA{p_EA} {
+      : BaseDisp(basis.flat(), element), EA{p_EA} {
     this->localView().bind(element);
   }
 
- private:
-  template <class Scalar>
-  Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
+  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
+
+ protected:
+  template <typename ScalarType>
+  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
+                                                         = std::nullopt) const -> ScalarType {
     const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda = par.getParameter(FEParameter::loadfactor);
 
@@ -64,20 +67,26 @@ struct Truss : Ikarus::PowerBasisFE<typename Basis::FlatBasis>,
     const auto X1 = Dune::toEigen(ele.geometry().corner(0));
     const auto X2 = Dune::toEigen(ele.geometry().corner(1));
 
-    Eigen::Matrix<Scalar, Traits::worlddim, 2> u;
+    Eigen::Matrix<ScalarType, Traits::worlddim, 2> u;
     u.setZero();
-    for (int i = 0; i < 2; ++i)
-      for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-        u.col(i)(k2) = dx[Traits::worlddim * i + k2]
-                       + d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+    if (dx) {
+      for (int i = 0; i < 2; ++i)
+        for (int k2 = 0; k2 < Traits::worlddim; ++k2)
+          u.col(i)(k2) = dx.value()[Traits::worlddim * i + k2]
+                         + d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+    } else {
+      for (int i = 0; i < 2; ++i)
+        for (int k2 = 0; k2 < Traits::worlddim; ++k2)
+          u.col(i)(k2) = d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+    }
 
-    const Eigen::Vector2<Scalar> x1 = X1 + u.col(0);
-    const Eigen::Vector2<Scalar> x2 = X2 + u.col(1);
+    const Eigen::Vector2<ScalarType> x1 = X1 + u.col(0);
+    const Eigen::Vector2<ScalarType> x2 = X2 + u.col(1);
 
-    const double LRefsquared = (X1 - X2).squaredNorm();
-    const Scalar lsquared    = (x1 - x2).squaredNorm();
+    const double LRefsquared  = (X1 - X2).squaredNorm();
+    const ScalarType lsquared = (x1 - x2).squaredNorm();
 
-    const Scalar Egl = 0.5 * (lsquared - LRefsquared) / LRefsquared;
+    const ScalarType Egl = 0.5 * (lsquared - LRefsquared) / LRefsquared;
 
     return 0.5 * EA / sqrt(LRefsquared) * Egl * Egl;
   }
@@ -107,7 +116,7 @@ int main(int argc, char **argv) {
 
   /// Create finite elements
   const double EA = 100;
-  std::vector<Truss<decltype(basis)>> fes;
+  std::vector<AutoDiffFE<Truss<decltype(basis)>>> fes;
   for (auto &ele : elements(gridView))
     fes.emplace_back(basis, ele, EA);
 

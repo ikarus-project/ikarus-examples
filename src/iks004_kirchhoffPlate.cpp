@@ -24,6 +24,7 @@
 #include <ikarus/finiteElements/feBases/autodiffFE.hh>
 #include <ikarus/finiteElements/feBases/scalarFE.hh>
 #include <ikarus/finiteElements/feTraits.hh>
+#include <ikarus/finiteElements/physicsHelper.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
 #include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
@@ -38,24 +39,22 @@
 #include <ikarus/utils/observer/loadControlObserver.hh>
 #include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
-template <typename Basis>
-struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
-                        public Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, typename Basis::FlatBasis> {
-  using FlatBasis = typename Basis::FlatBasis;
-  using BaseDisp  = Ikarus::ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
-  using BaseAD    = Ikarus::AutoDiffFE<KirchhoffPlate<Basis>, typename Basis::FlatBasis>;
-  using BaseAD::localView;
-  using BaseAD::size;
+using namespace Ikarus;
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
+class KirchhoffPlate : public ScalarFieldFE<typename Basis_::FlatBasis> {
+ public:
+  using Basis             = Basis_;
+  using FlatBasis         = typename Basis::FlatBasis;
+  using BaseDisp          = ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
   using LocalView         = typename FlatBasis::LocalView;
-  using FERequirementType = typename BaseAD::FERequirementType;
+  using Element           = typename LocalView::Element;
+  using Geometry          = typename Element::Geometry;
+  using FERequirementType = FERequirements_;
+  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
 
   KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
                  double p_thickness)
-      : BaseDisp(basis.flat(), element),
-        BaseAD(basis.flat(), element),
-        Emodul{p_Emodul},
-        nu{p_nu},
-        thickness{p_thickness} {
+      : BaseDisp(basis.flat(), element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
     this->localView().bind(element);
     geometry_.emplace(this->localView().element().geometry());
   }
@@ -72,22 +71,31 @@ struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
     return D;
   }
 
-  template <class Scalar>
-  [[nodiscard]] Scalar calculateScalarImpl(const FERequirementType &par, const Eigen::VectorX<Scalar> &dx) const {
+  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
+
+ protected:
+  template <typename ScalarType>
+  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
+                                                         = std::nullopt) const -> ScalarType {
     const auto &wGlobal = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto &lambda  = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D        = constitutiveMatrix(Emodul, nu, thickness);
-    Scalar energy       = 0.0;
+    ScalarType energy   = 0.0;
     auto &ele           = this->localView().element();
     auto &fe            = this->localView().tree().finiteElement();
-    Eigen::VectorX<Scalar> wNodal;
+    Eigen::VectorX<ScalarType> wNodal;
     wNodal.setZero(fe.size());
     Dune::CachedLocalBasis localBasis(fe.localBasis());
     const auto &rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
 
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
-    for (auto i = 0U; i < fe.size(); ++i)
-      wNodal(i) = dx[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+    if (dx) {
+      for (auto i = 0U; i < fe.size(); ++i)
+        wNodal(i) = dx.value()[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+    } else {
+      for (auto i = 0U; i < fe.size(); ++i)
+        wNodal(i) = wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+    }
 
     /// Calculate Kirchhoff plate energy
     for (auto &&[gpIndex, gp] : localBasis.viewOverIntegrationPoints()) {
@@ -109,9 +117,9 @@ struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
         ddN_yy[i] = ddN_etaeta[i] * power(Jinv(1, 1), 2);
         ddN_xy[i] = ddN_xieta[i] * Jinv(0, 0) * Jinv(1, 1);
       }
-      Eigen::Vector<Scalar, 3> kappa;
+      Eigen::Vector<ScalarType, 3> kappa;
       kappa << ddN_xx.dot(wNodal), ddN_yy.dot(wNodal), 2 * ddN_xy.dot(wNodal);
-      Scalar w = N.dot(wNodal);
+      ScalarType w = N.dot(wNodal);
 
       energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry_->integrationElement(gp.position()) * gp.weight();
     }
@@ -133,8 +141,8 @@ struct KirchhoffPlate : public Ikarus::ScalarFieldFE<typename Basis::FlatBasis>,
               dN_x[i] = dN_xi_eta(i, 0) * Jinv(0, 0);
               dN_y[i] = dN_xi_eta(i, 1) * Jinv(1, 1);
             }
-            const Scalar w_x = dN_x.dot(wNodal);
-            const Scalar w_y = dN_y.dot(wNodal);
+            const ScalarType w_x = dN_x.dot(wNodal);
+            const ScalarType w_y = dN_y.dot(wNodal);
 
             energy += 0.0 * 0.5 * penaltyFactor * (w_x * w_x + w_y * w_y);
           }
@@ -202,7 +210,7 @@ int main(int argc, char **argv) {
     const double Emod      = 2.1e8;
     const double nu        = 0.3;
     const double thickness = 0.1;
-    std::vector<KirchhoffPlate<decltype(basis)>> fes;
+    std::vector<AutoDiffFE<KirchhoffPlate<decltype(basis)>>> fes;
     for (auto &ele : elements(gridView))
       fes.emplace_back(basis, ele, Emod, nu, thickness);
 
