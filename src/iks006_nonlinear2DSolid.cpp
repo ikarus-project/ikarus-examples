@@ -12,6 +12,7 @@
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/powerbasis.hh>
 #include <dune/grid/yaspgrid.hh>
+#include <dune/iga/nurbsbasis.hh>
 #include <dune/iga/nurbsgrid.hh>
 
 #include "spdlog/spdlog.h"
@@ -43,7 +44,7 @@
 // 0 - Newton Raphson method
 // 1 - Trust region method
 
-#define gridType 1
+#define gridType 2
 #define solverType 0
 
 int main(int argc, char **argv) {
@@ -122,7 +123,7 @@ int main(int argc, char **argv) {
   auto basis = Ikarus::makeBasis(gridView, power<gridDim>(lagrange<1>()));
 #endif
 #if (gridType == 2)
-  auto basis = Ikarus::makeBasis(gridView, power<gridDim>(gridView.impl().getPreBasis()));
+  auto basis = Ikarus::makeBasis(gridView, power<gridDim>(nurbs()));
 #endif
 
   std::cout << "This gridview contains: " << std::endl;

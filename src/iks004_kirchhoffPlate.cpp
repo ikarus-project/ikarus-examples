@@ -11,7 +11,7 @@
 #include <dune/functions/functionspacebases/subspacebasis.hh>
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
 #include <dune/geometry/quadraturerules.hh>
-#include <dune/iga/igaalgorithms.hh>
+#include <dune/iga/nurbsbasis.hh>
 #include <dune/iga/nurbsgrid.hh>
 #include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
 #include <dune/localfefunctions/eigenDuneTransformations.hh>
@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
     //    draw(gridView);
     using namespace Dune::Functions::BasisFactory;
     /// Create nurbs basis with extracted preBase from grid
-    auto basis = Ikarus::makeBasis(gridView, gridView.impl().getPreBasis());
+    auto basis = Ikarus::makeBasis(gridView, nurbs());
     /// Fix complete boundary (simply supported plate)
     auto basisP = std::make_shared<const decltype(basis)>(basis);
     Ikarus::DirichletValues dirichletValues(basisP->flat());
