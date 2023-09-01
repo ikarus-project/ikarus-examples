@@ -88,7 +88,7 @@ class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
 
     const ScalarType Egl = 0.5 * (lsquared - LRefsquared) / LRefsquared;
 
-    return 0.5 * EA / sqrt(LRefsquared) * Egl * Egl;
+    return 0.5 * EA * sqrt(LRefsquared) * Egl * Egl;
   }
 
  private:
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
   /// Construct grid
   Dune::GridFactory<Dune::FoamGrid<1, 2, double>> gridFactory;
   const double h = 1.0;
-  const double L = 1.0;
+  const double L = 2.0;
   gridFactory.insertVertex({0, 0});
   gridFactory.insertVertex({L, h});
   gridFactory.insertVertex({2 * L, 0});
@@ -201,17 +201,18 @@ int main(int argc, char **argv) {
 
   auto analyticalLoadDisplacementCurve = [&](auto &w) {
     const double Ltruss = std::sqrt(h * h + L * L);
-    return EA * Dune::power(h, 3) / Dune::power(Ltruss, 3)
+    return 2.0 * EA * Dune::power(h, 3) / Dune::power(Ltruss, 3)
            * (w / h - 1.5 * Dune::power(w / h, 2) + 0.5 * Dune::power(w / h, 3));
   };
 
   std::vector<double> x  = linspace(0.0, dVec.maxCoeff());
   std::vector<double> y1 = transform(x, [&](auto x) { return analyticalLoadDisplacementCurve(x); });
   auto p                 = plot(x, y1, dVec, lambdaVec);
-  p[0]->line_width(2);
+  p[0]->line_width(3);
   p[1]->line_width(2);
   p[1]->marker(line_spec::marker_style::asterisk);
+  // save("vonMisesTruss.png");
   // f->draw();
-  //  using namespace std::chrono_literals;
-  //  std::this_thread::sleep_for(5s);
+  // using namespace std::chrono_literals;
+  // std::this_thread::sleep_for(5s);
 }

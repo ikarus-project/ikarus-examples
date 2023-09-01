@@ -192,7 +192,6 @@ int main(int argc, char **argv) {
 
   /// Create assembler
   auto sparseFlatAssembler = SparseFlatAssembler(fes, dirichletValues);
-  auto denseFlatAssembler  = DenseFlatAssembler(fes, dirichletValues);
 
   /// Create function for external forces and stiffness matrix
   double lambda = 0;
@@ -204,7 +203,7 @@ int main(int argc, char **argv) {
   auto fextFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return denseFlatAssembler.getReducedVector(req);
+    return sparseFlatAssembler.getReducedVector(req);
   };
   auto KFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
@@ -218,7 +217,7 @@ int main(int argc, char **argv) {
   ld.compute(K);
   if (ld.info() != Eigen::Success) DUNE_THROW(Dune::MathError, "Failed Compute");
 
-  d -= denseFlatAssembler.createFullVector(ld.solve(R));
+  d -= sparseFlatAssembler.createFullVector(ld.solve(R));
   if (ld.info() != Eigen::Success) DUNE_THROW(Dune::MathError, "Failed Solve");
 
   /// Postprocess

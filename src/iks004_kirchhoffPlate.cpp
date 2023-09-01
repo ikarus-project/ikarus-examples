@@ -283,8 +283,6 @@ int main(int argc, char **argv) {
       const auto &rule = Dune::QuadratureRules<double, 2>::rule(
           ele.type(), 2 * localView.tree().finiteElement().localBasis().order());
       for (auto gp : rule) {
-        const auto gpGlobalPos = geo.global(gp.position());
-
         const auto w_ex = localwAna(gp.position());
         const auto w_fe = localw(gp.position());
         l2_error += Dune::power(w_ex - w_fe, 2) * ele.geometry().integrationElement(gp.position()) * gp.weight();
