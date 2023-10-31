@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   auto nonLinOp = Ikarus::NonLinearOperator(functions(RFunction, KFunction), parameter(d, lambda));
 
   /// Choose linear solver
-  auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::d_LDLT);
+  auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::d_LDLT);
 
   /// Create Nonlinear solver for controlroutine, i.e. a Newton-Rahpson object
   auto nr = Ikarus::makeNewtonRaphson(nonLinOp, std::move(linSolver));

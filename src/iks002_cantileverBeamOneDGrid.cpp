@@ -223,7 +223,7 @@ void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrder
   }
 
   /// solve the linear system
-  auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::d_LDLT);
+  auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::d_LDLT);
   linSolver.factorize(KGlobal);
   Eigen::VectorXd dGlobal;
   linSolver.solve(dGlobal, FExtGlobal);

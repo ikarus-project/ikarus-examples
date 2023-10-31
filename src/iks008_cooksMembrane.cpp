@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
       const auto &Fext = nonLinOp.value();
 
       /// solve the linear system
-      auto linSolver   = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::sd_CholmodSupernodalLLT);
+      auto linSolver   = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_CholmodSupernodalLLT);
       auto startSolver = std::chrono::high_resolution_clock::now();
 
       linSolver.compute(K);

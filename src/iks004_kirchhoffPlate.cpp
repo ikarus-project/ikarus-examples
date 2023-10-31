@@ -27,7 +27,6 @@
 #include <ikarus/finiteElements/physicsHelper.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/concepts.hh>
@@ -37,7 +36,6 @@
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlVTKWriter.hh>
 #include <ikarus/utils/observer/loadControlObserver.hh>
-#include <ikarus/utils/observer/nonLinearSolverLogger.hh>
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>

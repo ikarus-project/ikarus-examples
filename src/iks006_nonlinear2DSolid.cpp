@@ -22,6 +22,8 @@
 #include <ikarus/assembler/simpleAssemblers.hh>
 #include <ikarus/controlRoutines/loadControl.hh>
 #include <ikarus/finiteElements/feRequirements.hh>
+#include <ikarus/finiteElements/mechanics/materials/svk.hh>
+#include <ikarus/finiteElements/mechanics/materials/vanishingStress.hh>
 #include <ikarus/finiteElements/mechanics/nonLinearElastic.hh>
 #include <ikarus/linearAlgebra/dirichletValues.hh>
 #include <ikarus/linearAlgebra/nonLinearOperator.hh>
@@ -194,7 +196,7 @@ int main(int argc, char **argv) {
   auto nonLinOp
       = Ikarus::NonLinearOperator(functions(energyFunction, residualFunction, KFunction), parameter(d, lambda));
 
-  auto linSolver = Ikarus::ILinearSolver<double>(Ikarus::SolverTypeTag::sd_UmfPackLU);
+  auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_UmfPackLU);
 
 #if solverType == 0
   auto nr = Ikarus::makeNewtonRaphson(nonLinOp.subOperator<1, 2>(), std::move(linSolver));
