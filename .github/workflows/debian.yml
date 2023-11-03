@@ -25,13 +25,13 @@ jobs:
           #            compilerCxx: clang++-12,
           #            lib: "-stdlib=libc++",
           #           }
-          #          - {
-          #            name: "Clang-Release",
-          #            config: Release,
-          #            compilerC: clang-12,
-          #            compilerCxx: clang++-12,
-          #            lib: "-stdlib=libc++",
-          #           }
+          - {
+            name: "Clang-Release",
+            config: Release,
+            compilerC: clang-16,
+            compilerCxx: clang++-16,
+            lib: "-stdlib=libc++",
+          }
           #          - {
           #            name: "GCC-Debug",
           #            config: Debug,

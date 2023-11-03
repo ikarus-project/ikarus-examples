@@ -19,7 +19,7 @@ foreach(programSourceFile ${programSourceFiles})
                           -Wno-deprecated-copy -ftemplate-backtrace-limit=0
   )
 
-  target_link_libraries(${programName} PUBLIC ikarus)
+  target_link_libraries(${programName} PRIVATE ikarus)
   add_dependencies(AllExamples ${programName})
   find_package(PythonLibs REQUIRED)
   include_directories(${PYTHON_INCLUDE_DIRS})
