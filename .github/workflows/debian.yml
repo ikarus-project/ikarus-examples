@@ -12,7 +12,7 @@ jobs:
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-latest
     container:
-      image: ikarusproject/ikarus:latest
+      image: ikarusproject/ikarus-${{ matrix.config.compiler }}:latest
       options: --memory-swap="20g" --memory="20g" --cpus="2"
     strategy:
       fail-fast: false
@@ -28,6 +28,7 @@ jobs:
           - {
             name: "Clang-Release",
             config: Release,
+            compiler: clang,
             compilerC: clang-16,
             compilerCxx: clang++-16,
             lib: "-stdlib=libc++",
@@ -42,6 +43,7 @@ jobs:
           - {
             name: "GCC-Release",
             config: Release,
+            compiler: gcc,
             compilerC: gcc-12,
             compilerCxx: g++-12,
             lib: ""
