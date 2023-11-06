@@ -19,23 +19,23 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
-#include <ikarus/assembler/simpleAssemblers.hh>
-#include <ikarus/controlRoutines/loadControl.hh>
-#include <ikarus/finiteElements/feBases/autodiffFE.hh>
-#include <ikarus/finiteElements/feBases/scalarFE.hh>
-#include <ikarus/finiteElements/feTraits.hh>
-#include <ikarus/finiteElements/physicsHelper.hh>
-#include <ikarus/linearAlgebra/dirichletValues.hh>
-#include <ikarus/linearAlgebra/nonLinearOperator.hh>
+#include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/controlroutines/loadcontrol.hh>
+#include <ikarus/finiteelements/febases/autodifffe.hh>
+#include <ikarus/finiteelements/febases/scalarfe.hh>
+#include <ikarus/finiteelements/fetraits.hh>
+#include <ikarus/finiteelements/physicshelper.hh>
+#include <ikarus/linearalgebra/dirichletvalues.hh>
+#include <ikarus/linearalgebra/nonlinearoperator.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/concepts.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneUtilities.hh>
-#include <ikarus/utils/eigenDuneTransformations.hh>
+#include <ikarus/utils/duneutilities.hh>
+#include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/observer/controlVTKWriter.hh>
-#include <ikarus/utils/observer/loadControlObserver.hh>
+#include <ikarus/utils/observer/controlvtkwriter.hh>
+#include <ikarus/utils/observer/loadcontrolobserver.hh>
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>

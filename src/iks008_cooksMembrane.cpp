@@ -19,17 +19,17 @@
 
 #include <Eigen/Eigenvalues>
 
-#include <ikarus/assembler/simpleAssemblers.hh>
-#include <ikarus/finiteElements/mechanics/enhancedAssumedStrains.hh>
-#include <ikarus/finiteElements/mechanics/linearElastic.hh>
-#include <ikarus/linearAlgebra/dirichletValues.hh>
-#include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/solver/linearSolver/linearSolver.hh>
+#include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/finiteelements/mechanics/enhancedassumedstrains.hh>
+#include <ikarus/finiteelements/mechanics/linearelastic.hh>
+#include <ikarus/linearalgebra/dirichletvalues.hh>
+#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneUtilities.hh>
+#include <ikarus/utils/duneutilities.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/observer/controlVTKWriter.hh>
+#include <ikarus/utils/observer/controlvtkwriter.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;

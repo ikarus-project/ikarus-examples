@@ -19,23 +19,23 @@
 
 #include <Eigen/Core>
 
-#include <ikarus/assembler/simpleAssemblers.hh>
-#include <ikarus/controlRoutines/loadControl.hh>
-#include <ikarus/finiteElements/feRequirements.hh>
-#include <ikarus/finiteElements/mechanics/materials/svk.hh>
-#include <ikarus/finiteElements/mechanics/materials/vanishingStress.hh>
-#include <ikarus/finiteElements/mechanics/nonLinearElastic.hh>
-#include <ikarus/linearAlgebra/dirichletValues.hh>
-#include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
-#include <ikarus/solver/nonLinearSolver/trustRegion.hh>
+#include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/controlroutines/loadcontrol.hh>
+#include <ikarus/finiteelements/ferequirements.hh>
+#include <ikarus/finiteelements/mechanics/materials/svk.hh>
+#include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
+#include <ikarus/finiteelements/mechanics/nonlinearelastic.hh>
+#include <ikarus/linearalgebra/dirichletvalues.hh>
+#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
+#include <ikarus/solver/nonlinearsolver/trustregion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneUtilities.hh>
+#include <ikarus/utils/duneutilities.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/observer/controlVTKWriter.hh>
-#include <ikarus/utils/observer/nonLinearSolverLogger.hh>
+#include <ikarus/utils/observer/controlvtkwriter.hh>
+#include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
 // The following grid types (gridType) are included in this example
 // 0 - ALUGrid
