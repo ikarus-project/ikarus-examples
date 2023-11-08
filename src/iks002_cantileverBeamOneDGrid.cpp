@@ -19,7 +19,7 @@
 
 #include <Eigen/Core>
 
-#include <ikarus/solver/linearSolver/linearSolver.hh>
+#include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/init.hh>

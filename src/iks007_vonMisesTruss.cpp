@@ -18,24 +18,24 @@
 
 #include <autodiff/forward/dual/dual.hpp>
 
-#include <ikarus/assembler/simpleAssemblers.hh>
-#include <ikarus/controlRoutines/loadControl.hh>
-#include <ikarus/finiteElements/feBases/autodiffFE.hh>
-#include <ikarus/finiteElements/feBases/powerBasisFE.hh>
-#include <ikarus/finiteElements/feTraits.hh>
-#include <ikarus/finiteElements/physicsHelper.hh>
-#include <ikarus/linearAlgebra/dirichletValues.hh>
-#include <ikarus/linearAlgebra/nonLinearOperator.hh>
-#include <ikarus/solver/linearSolver/linearSolver.hh>
-#include <ikarus/solver/nonLinearSolver/newtonRaphson.hh>
+#include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/controlroutines/loadcontrol.hh>
+#include <ikarus/finiteelements/febases/autodifffe.hh>
+#include <ikarus/finiteelements/febases/powerbasisfe.hh>
+#include <ikarus/finiteelements/fetraits.hh>
+#include <ikarus/finiteelements/physicshelper.hh>
+#include <ikarus/linearalgebra/dirichletvalues.hh>
+#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/solver/linearsolver/linearsolver.hh>
+#include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneUtilities.hh>
-#include <ikarus/utils/eigenDuneTransformations.hh>
+#include <ikarus/utils/duneutilities.hh>
+#include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/observer/controlVTKWriter.hh>
-#include <ikarus/utils/observer/genericControlObserver.hh>
-#include <ikarus/utils/observer/nonLinearSolverLogger.hh>
+#include <ikarus/utils/observer/controlvtkwriter.hh>
+#include <ikarus/utils/observer/genericcontrolobserver.hh>
+#include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
