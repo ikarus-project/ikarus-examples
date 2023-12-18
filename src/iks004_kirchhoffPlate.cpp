@@ -168,14 +168,14 @@ int main(int argc, char **argv) {
 
   using ControlPoint = Dune::IGA::NURBSPatchData<griddim, dimworld>::ControlPointType;
 
-  const double Lx = 1;
-  const double Ly = 1;
+  const double Lx = 10;
+  const double Ly = 10;
   const std::vector<std::vector<ControlPoint>> controlPoints
       = {{{.p = {0, 0}, .w = 1}, {.p = {0, Ly}, .w = 1}}, {{.p = {Lx, 0}, .w = 1}, {.p = {Lx, Ly}, .w = 1}}};
 
   std::array<int, griddim> dimsize = {2, 2};
 
-  std::vector<double> dofsVec;
+  std::vector<size_t> dofsVec;
   std::vector<double> l2Evcector;
   auto controlNet = Dune::IGA::NURBSPatchData<griddim, dimworld>::ControlPointNetType(dimsize, controlPoints);
   using Grid      = Dune::IGA::NURBSGrid<griddim, dimworld>;
@@ -184,12 +184,12 @@ int main(int argc, char **argv) {
   patchData.knotSpans     = knotSpans;
   patchData.degree        = {1, 1};
   patchData.controlPoints = controlNet;
-  /// Increate polynomial degree in each direction
+  /// Increase polynomial degree in each direction
   patchData = Dune::IGA::degreeElevate(patchData, 0, 1);
   patchData = Dune::IGA::degreeElevate(patchData, 1, 1);
   Grid grid(patchData);
 
-  for (int ref = 0; ref < 5; ++ref) {
+  for (int ref = 0; ref < 6; ++ref) {
     auto gridView = grid.leafGridView();
     //    draw(gridView);
     using namespace Dune::Functions::BasisFactory;
@@ -261,12 +261,10 @@ int main(int argc, char **argv) {
 
       return 16 * totalLoad / (Dune::power(pi, 6) * D) * w;
     };
-    //    std::cout << wxy(Lx / 2.0, Ly / 2.0) << std::endl;
 
     /// Displacement at center of clamped square plate
     // clamped sol http://faculty.ce.berkeley.edu/rlt/reports/clamp.pdf
     const double wCenterClamped = 1.265319087 / (D / (totalLoad * Dune::power(Lx, 4)) * 1000.0);
-    //    std::cout << wCenterClamped << std::endl;
     auto wGlobalFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(basis.flat(), w);
     auto wGlobalAnalyticFunction = Dune::Functions::makeAnalyticGridViewFunction(wAna, gridView);
@@ -281,7 +279,7 @@ int main(int argc, char **argv) {
       localwAna.bind(ele);
       const auto geo   = localView.element().geometry();
       const auto &rule = Dune::QuadratureRules<double, 2>::rule(
-          ele.type(), 2 * localView.tree().finiteElement().localBasis().order());
+          ele.type(), 2U * localView.tree().finiteElement().localBasis().order());
       for (auto gp : rule) {
         const auto w_ex = localwAna(gp.position());
         const auto w_fe = localw(gp.position());
@@ -305,7 +303,8 @@ int main(int argc, char **argv) {
   auto p = ax->loglog(dofsVec, l2Evcector);
   p->line_width(2);
   p->marker(line_spec::marker_style::asterisk);
-  //  f->draw();
+  // save("kirchhoffPlate.png");
+  // f->draw();
   using namespace std::chrono_literals;
   std::this_thread::sleep_for(5s);
 }
