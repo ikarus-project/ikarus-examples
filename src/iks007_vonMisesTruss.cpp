@@ -34,7 +34,7 @@
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
-#include <ikarus/utils/observer/genericcontrolobserver.hh>
+#include <ikarus/utils/observer/genericobserver.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
 using namespace Ikarus;
@@ -167,11 +167,12 @@ int main(int argc, char **argv) {
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
   /// Create Observer which executes when control routines messages
   /// SOLUTION_CHANGED
-  auto lvkObserver = std::make_shared<Ikarus::GenericControlObserver>(ControlMessages::SOLUTION_CHANGED, [&](int step) {
-    lambdaAndDisp(0, step) = lambda;
-    lambdaAndDisp(1, step) = d[2];
-    lambdaAndDisp(2, step) = d[3];
-  });
+  auto lvkObserver = std::make_shared<Ikarus::GenericObserver<Ikarus::ControlMessages>>(
+      Ikarus::ControlMessages::SOLUTION_CHANGED, [&](int step) {
+        lambdaAndDisp(0, step) = lambda;
+        lambdaAndDisp(1, step) = d[2];
+        lambdaAndDisp(2, step) = d[3];
+      });
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
