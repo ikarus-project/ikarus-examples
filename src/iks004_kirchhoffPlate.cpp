@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
   patchData = Dune::IGA::degreeElevate(patchData, 1, 1);
   Grid grid(patchData);
 
-  for (int ref = 0; ref < 6; ++ref) {
+  for (int ref = 0; ref < 5; ++ref) {
     auto gridView = grid.leafGridView();
     //    draw(gridView);
     using namespace Dune::Functions::BasisFactory;
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
     Eigen::VectorXd w;
     w.setZero(basis.flat().size());
 
-    double totalLoad = 2000;
+    double totalLoad = 2000 * thickness * thickness * thickness;
 
     auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
@@ -272,7 +272,8 @@ int main(int argc, char **argv) {
     auto localwAna               = localFunction(wGlobalAnalyticFunction);
 
     /// Calculate L_2 error for simply supported case
-    double l2_error = 0.0;
+    double l2_error  = 0.0;
+    double l2_normEx = 0.0;
     for (auto &ele : elements(gridView)) {
       localView.bind(ele);
       localw.bind(ele);
@@ -281,13 +282,15 @@ int main(int argc, char **argv) {
       const auto &rule = Dune::QuadratureRules<double, 2>::rule(
           ele.type(), 2U * localView.tree().finiteElement().localBasis().order());
       for (auto gp : rule) {
-        const auto w_ex = localwAna(gp.position());
-        const auto w_fe = localw(gp.position());
-        l2_error += Dune::power(w_ex - w_fe, 2) * ele.geometry().integrationElement(gp.position()) * gp.weight();
+        const auto intElement = ele.geometry().integrationElement(gp.position()) * gp.weight();
+        const auto w_ex       = localwAna(gp.position());
+        const auto w_fe       = localw(gp.position());
+        l2_error += Dune::power(w_ex - w_fe, 2) * intElement;
+        l2_normEx += w_ex * intElement;
       }
     }
 
-    l2_error = std::sqrt(l2_error);
+    l2_error = std::sqrt(l2_error) / std::sqrt(l2_normEx);
     std::cout << "l2_error: " << l2_error << " Dofs:: " << basis.flat().size() << std::endl;
     dofsVec.push_back(basis.flat().size());
     l2Evcector.push_back(l2_error);
