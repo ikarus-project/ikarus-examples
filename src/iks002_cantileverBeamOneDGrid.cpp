@@ -25,7 +25,6 @@
 #include <ikarus/utils/init.hh>
 using namespace Dune::Functions::BasisFactory;
 using namespace Dune::Functions;
-using namespace Dune::Functions::BasisBuilder;
 using namespace Dune::Indices;
 
 void TimoshenkoBeamStiffness(auto &KLocal, auto &localView, auto &gridElement, auto &quadratureRule,

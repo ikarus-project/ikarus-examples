@@ -30,7 +30,7 @@
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/concepts.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneutilities.hh>
+#include <ikarus/utils/pythonautodiffdefinitions.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>

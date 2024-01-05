@@ -45,7 +45,7 @@ void newtonRaphsonVeryBasicExample() {
   std::cout << "expected solution: " << xExpected << "\n";
 }
 
-class OurFirstObserver : public IObserver<Ikarus::NonLinearSolverMessages> {
+class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages> {
  public:
   void updateImpl(Ikarus::NonLinearSolverMessages message) override {
     if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED) std::cout << "Iteration started.\n";

@@ -17,6 +17,7 @@
 #include <dune/localfefunctions/cachedlocalBasis/cachedlocalBasis.hh>
 
 #include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <autodiff/forward/dual/dual.hpp>
 
