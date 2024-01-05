@@ -4,7 +4,7 @@
 #include "config.h"
 
 #include <ikarus/assembler/simpleassemblers.hh>
-#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>

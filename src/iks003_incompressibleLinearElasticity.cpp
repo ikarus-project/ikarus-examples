@@ -23,7 +23,7 @@
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/finiteelements/febases/autodifffe.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
-#include <ikarus/linearalgebra/dirichletvalues.hh>
+#include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
