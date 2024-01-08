@@ -25,14 +25,14 @@
 #include <ikarus/finiteelements/mechanics/materials/svk.hh>
 #include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
 #include <ikarus/finiteelements/mechanics/nonlinearelastic.hh>
-#include <ikarus/linearalgebra/dirichletvalues.hh>
-#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/utils/dirichletvalues.hh>
+#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/solver/nonlinearsolver/trustregion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneutilities.hh>
+#include <ikarus/utils/pythonautodiffdefinitions.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>

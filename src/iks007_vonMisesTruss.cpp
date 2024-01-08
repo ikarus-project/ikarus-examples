@@ -24,13 +24,13 @@
 #include <ikarus/finiteelements/febases/powerbasisfe.hh>
 #include <ikarus/finiteelements/fetraits.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
-#include <ikarus/linearalgebra/dirichletvalues.hh>
-#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/utils/dirichletvalues.hh>
+#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneutilities.hh>
+#include <ikarus/utils/pythonautodiffdefinitions.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
@@ -136,10 +136,10 @@ int main(int argc, char **argv) {
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-  auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
+  auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto  {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    auto &R = denseFlatAssembler.getVector(req);
+    auto R = denseFlatAssembler.getVector(req);
     R[3] -= -lambdaLocal;
     return R;
   };

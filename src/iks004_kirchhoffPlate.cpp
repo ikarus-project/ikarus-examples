@@ -24,13 +24,13 @@
 #include <ikarus/finiteelements/febases/scalarfe.hh>
 #include <ikarus/finiteelements/fetraits.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
-#include <ikarus/linearalgebra/dirichletvalues.hh>
-#include <ikarus/linearalgebra/nonlinearoperator.hh>
+#include <ikarus/utils/dirichletvalues.hh>
+#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/concepts.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/duneutilities.hh>
+#include <ikarus/utils/pythonautodiffdefinitions.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
