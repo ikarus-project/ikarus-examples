@@ -24,9 +24,9 @@
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/finiteelements/febases/autodifffe.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
-#include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/init.hh>
 
@@ -35,13 +35,14 @@ using namespace Dune::Indices;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
 struct Solid {
  public:
-  using Basis             = Basis_;
-  using FlatBasis         = typename Basis::FlatBasis;
-  using LocalView         = typename FlatBasis::LocalView;
-  using Element           = typename LocalView::Element;
-  using Geometry          = typename Element::Geometry;
-  using FERequirementType = FERequirements_;
-  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
+  using Traits            = TraitsFromFE<Basis_, FERequirements_, useEigenRef>;
+  using Basis             = typename Traits::Basis;
+  using FlatBasis         = typename Traits::FlatBasis;
+  using FERequirementType = typename Traits::FERequirementType;
+  using LocalView         = typename Traits::LocalView;
+  using Geometry          = typename Traits::Geometry;
+  using Element           = typename Traits::Element;
+
   Solid(const Basis &basis, const typename LocalView::Element &element, double emod, double nu)
       : localView_{basis.flat().localView()}, emod_{emod}, nu_{nu} {
     localView_.bind(element);
@@ -114,10 +115,10 @@ struct Solid {
     Eigen::VectorXd Ndisp;
     Eigen::VectorXd Npressure;
     for (auto &&gp : rule) {
-      const auto J = toEigen(geo.jacobianTransposed(gp.position())).transpose().eval();
+      const auto J = Dune::toEigen(geo.jacobianTransposed(gp.position())).transpose().eval();
       localBasisDisp.evaluateFunctionAndJacobian(gp.position(), Ndisp, dNdisp);
       localBasisPressure.evaluateFunction(gp.position(), Npressure);
-      const Eigen::Vector<double, Traits::worlddim> X = toEigen(geo.global(gp.position()));
+      const Eigen::Vector<double, Traits::worlddim> X = Dune::toEigen(geo.global(gp.position()));
       Eigen::Vector<ScalarType, Traits::worlddim> x   = X;
       for (auto i = 0U; i < feDisp.size(); ++i)
         x += disp.col(i) * Ndisp[i];

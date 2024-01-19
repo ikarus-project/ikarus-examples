@@ -24,31 +24,32 @@
 #include <ikarus/finiteelements/febases/powerbasisfe.hh>
 #include <ikarus/finiteelements/fetraits.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
-#include <ikarus/utils/dirichletvalues.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/pythonautodiffdefinitions.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
+#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/genericobserver.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
+#include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
 class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
  public:
-  using Basis             = Basis_;
-  using FlatBasis         = typename Basis::FlatBasis;
+  using Traits            = TraitsFromFE<Basis_, FERequirements_, useEigenRef>;
+  using Basis             = typename Traits::Basis;
+  using FlatBasis         = typename Traits::FlatBasis;
+  using FERequirementType = typename Traits::FERequirementType;
+  using LocalView         = typename Traits::LocalView;
+  using Geometry          = typename Traits::Geometry;
+  using Element           = typename Traits::Element;
   using BaseDisp          = Ikarus::PowerBasisFE<FlatBasis>;
-  using LocalView         = typename FlatBasis::LocalView;
-  using Element           = typename LocalView::Element;
-  using Geometry          = typename Element::Geometry;
-  using FERequirementType = FERequirements_;
-  using Traits            = TraitsFromLocalView<LocalView, useEigenRef>;
+
   Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
       : BaseDisp(basis.flat(), element), EA{p_EA} {
     this->localView().bind(element);
@@ -136,7 +137,7 @@ int main(int argc, char **argv) {
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-  auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto  {
+  auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     auto R = denseFlatAssembler.getVector(req);

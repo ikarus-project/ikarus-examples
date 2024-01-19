@@ -22,14 +22,14 @@
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/finiteelements/mechanics/enhancedassumedstrains.hh>
 #include <ikarus/finiteelements/mechanics/linearelastic.hh>
-#include <ikarus/utils/dirichletvalues.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/pythonautodiffdefinitions.hh>
 #include <ikarus/utils/init.hh>
+#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
+#include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
 using namespace Dune::Indices;
@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
         for (size_t i = 0; i < 4; ++i) {
           if (Dune::FloatCmp::eq(geo.corner(i)[0], req_pos[0]) and Dune::FloatCmp::eq(geo.corner(i)[1], req_pos[1])) {
             const auto local_pos = geo.local(toDune(req_pos));
-            uy_fe                = toEigen(localw(local_pos)).eval()[1];
+            uy_fe                = Dune::toEigen(localw(local_pos)).eval()[1];
           }
         }
       }
