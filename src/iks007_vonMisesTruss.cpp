@@ -39,19 +39,19 @@
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class Truss : public PowerBasisFE<typename Basis_::FlatBasis> {
+class Truss : public PowerBasisFE<Basis_> {
  public:
-  using Traits            = TraitsFromFE<Basis_, FERequirements_, useEigenRef>;
+  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
   using Basis             = typename Traits::Basis;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using BaseDisp          = Ikarus::PowerBasisFE<FlatBasis>;
+  using BaseDisp          = Ikarus::PowerBasisFE<Basis>;
 
   Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
-      : BaseDisp(basis.flat(), element), EA{p_EA} {
+      : BaseDisp(basis, element), EA{p_EA} {
     this->localView().bind(element);
   }
 

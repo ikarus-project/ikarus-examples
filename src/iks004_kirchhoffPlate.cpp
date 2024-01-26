@@ -37,20 +37,20 @@
 
 using namespace Ikarus;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class KirchhoffPlate : public ScalarFieldFE<typename Basis_::FlatBasis> {
+class KirchhoffPlate : public ScalarFieldFE<Basis_> {
  public:
-  using Traits            = TraitsFromFE<Basis_, FERequirements_, useEigenRef>;
+  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
   using Basis             = typename Traits::Basis;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using BaseDisp          = ScalarFieldFE<FlatBasis>;  // Handles globalIndices function
+  using BaseDisp          = ScalarFieldFE<Basis>;  // Handles globalIndices function
 
   KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
                  double p_thickness)
-      : BaseDisp(basis.flat(), element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
+      : BaseDisp(basis, element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
     this->localView().bind(element);
     geometry_.emplace(this->localView().element().geometry());
   }

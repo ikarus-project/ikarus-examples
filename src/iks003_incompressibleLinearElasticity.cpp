@@ -23,6 +23,7 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/finiteelements/febases/autodifffe.hh>
+#include <ikarus/finiteelements/fetraits.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -35,7 +36,7 @@ using namespace Dune::Indices;
 template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
 struct Solid {
  public:
-  using Traits            = TraitsFromFE<Basis_, FERequirements_, useEigenRef>;
+  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
   using Basis             = typename Traits::Basis;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
