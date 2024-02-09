@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 Module: ikarus-examples
-Version: 0.2
+Version: 0.4
 Maintainer: mueller@ibb.uni-stuttgart.de
 # Required build dependencies
-Depends: dune-typetree dune-geometry dune-iga dune-functions dune-grid dune-fufem dune-alugrid dune-foamgrid dune-uggrid dune-vtk ikarus(0.2.0)
+Depends: dune-typetree dune-geometry dune-iga dune-functions dune-grid dune-fufem dune-alugrid dune-foamgrid dune-uggrid dune-vtk ikarus(0.4.0)
 # Optional build dependencies
 #Suggests:
