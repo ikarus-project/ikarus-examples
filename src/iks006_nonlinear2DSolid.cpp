@@ -38,6 +38,10 @@
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
+#include <ikarus/io/resultfunction.hh>
+#include <ikarus/io/resultevaluators.hh>
+
+
 // The following grid types (gridType) are included in this example
 // 0 - ALUGrid
 // 1 - YaspGrid
@@ -230,14 +234,16 @@ int main(int argc, char **argv) {
   std::cout << "Energy after: " << nonLinOp.value() << std::endl;
 
   // Postprocessing
-  auto stressFunction = Ikarus::makeResultFunction<ResultType::PK2Stress>(&fes, req);
   auto displacementFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
+  auto stressFunction = Ikarus::makeResultFunction<ResultType::PK2Stress>(&fes, req);
+  auto vonMisesFunction = Ikarus::makeResultFunction<ResultType::PK2Stress, ResultEvaluators::VonMises<gridDim>>(&fes, req);
 
   Dune::VTKWriter resultWriter(gridView);
-  resultWriter.addVertexData(stressFunction);
   resultWriter.addVertexData(displacementFunction,
                              Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
+  resultWriter.addVertexData(stressFunction);
+  resultWriter.addVertexData(vonMisesFunction);
 
   resultWriter.write("iks006_nonlinear2DSolid_Result");
 }
