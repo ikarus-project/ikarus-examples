@@ -25,6 +25,8 @@
 #include <ikarus/finiteelements/mechanics/materials/svk.hh>
 #include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
 #include <ikarus/finiteelements/mechanics/nonlinearelastic.hh>
+#include <ikarus/io/resultevaluators.hh>
+#include <ikarus/io/resultfunction.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/solver/nonlinearsolver/trustregion.hh>
 #include <ikarus/utils/algorithms.hh>
@@ -227,4 +229,18 @@ int main(int argc, char **argv) {
   lc.run();
   nonLinOp.update<0>();
   std::cout << "Energy after: " << nonLinOp.value() << std::endl;
+
+  // Postprocessing
+  auto displacementFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
+  auto stressFunction   = Ikarus::makeResultFunction<ResultType::PK2Stress>(&fes, req);
+  auto vonMisesFunction = Ikarus::makeResultFunction<ResultType::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
+
+  Dune::VTKWriter resultWriter(gridView);
+  resultWriter.addVertexData(displacementFunction,
+                             Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
+  resultWriter.addVertexData(stressFunction);
+  resultWriter.addVertexData(vonMisesFunction);
+
+  resultWriter.write("iks006_nonlinear2DSolid_Result");
 }

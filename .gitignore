@@ -6,6 +6,7 @@
 /cpm_modules
 .DS_Store
 .idea/
+*cmake-build*
 cmake-build-debug/
 cmake-build-debug-dockerfull/
 cmake-build-debug-dockerfulldocs/
