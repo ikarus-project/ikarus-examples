@@ -20,9 +20,8 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
-#include <ikarus/finiteelements/febases/autodifffe.hh>
-#include <ikarus/finiteelements/febases/powerbasisfe.hh>
-#include <ikarus/finiteelements/fetraits.hh>
+#include <ikarus/finiteelements/autodiff/autodifffe.hh>
+#include <ikarus/finiteelements/febase.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
@@ -38,22 +37,20 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class Truss : public PowerBasisFE<Basis_> {
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false, bool useFlat = true>
+class Truss : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
  public:
-  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
-  using Basis             = typename Traits::Basis;
+  using Base              = FEBase<Basis_, useFlat, FERequirements_, useEigenRef>;
+  using Traits            = typename Base::Traits;
+  using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using BaseDisp          = Ikarus::PowerBasisFE<Basis>;
 
-  Truss(const Basis &basis, const typename LocalView::Element &element, double p_EA)
-      : BaseDisp(basis, element), EA{p_EA} {
-    this->localView().bind(element);
-  }
+  Truss(const BasisHandler &basisHandler, const typename LocalView::Element &element, double p_EA)
+      : Base(basisHandler, element), EA{p_EA} {}
 
   inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
 

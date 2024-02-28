@@ -20,9 +20,8 @@
 #include <Eigen/Dense>
 
 #include <ikarus/assembler/simpleassemblers.hh>
-#include <ikarus/finiteelements/febases/autodifffe.hh>
-#include <ikarus/finiteelements/febases/scalarfe.hh>
-#include <ikarus/finiteelements/fetraits.hh>
+#include <ikarus/finiteelements/autodiff/autodifffe.hh>
+#include <ikarus/finiteelements/febase.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -36,22 +35,21 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class KirchhoffPlate : public ScalarFieldFE<Basis_> {
+template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false, bool useFlat = true>
+class KirchhoffPlate : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
  public:
-  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
-  using Basis             = typename Traits::Basis;
+  using Base              = FEBase<Basis_, useFlat, FERequirements_, useEigenRef>;
+  using Traits            = typename Base::Traits;
+  using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using BaseDisp          = ScalarFieldFE<Basis>;  // Handles globalIndices function
 
-  KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
-                 double p_thickness)
-      : BaseDisp(basis, element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
-    this->localView().bind(element);
+  KirchhoffPlate(const BasisHandler &basisHandler, const typename LocalView::Element &element, double p_Emodul,
+                 double p_nu, double p_thickness)
+      : Base(basisHandler, element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
     geometry_.emplace(this->localView().element().geometry());
   }
 
