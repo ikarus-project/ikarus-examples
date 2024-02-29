@@ -35,10 +35,10 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false, bool useFlat = true>
-class KirchhoffPlate : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
+template <typename Basis_>
+class KirchhoffPlate : public FEBase<Basis_> {
  public:
-  using Base              = FEBase<Basis_, useFlat, FERequirements_, useEigenRef>;
+  using Base              = FEBase<Basis_>;
   using Traits            = typename Base::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
@@ -71,12 +71,14 @@ class KirchhoffPlate : public FEBase<Basis_, useFlat, FERequirements_, useEigenR
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
                                                          = std::nullopt) const -> ScalarType {
-    const auto &wGlobal = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda  = par.getParameter(Ikarus::FEParameter::loadfactor);
-    const auto D        = constitutiveMatrix(Emodul, nu, thickness);
-    ScalarType energy   = 0.0;
-    auto &ele           = this->localView().element();
-    auto &fe            = this->localView().tree().finiteElement();
+    const auto &wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto &lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+    const auto D          = constitutiveMatrix(Emodul, nu, thickness);
+    ScalarType energy     = 0.0;
+    const auto &localView = this->localView();
+    const auto &tree      = localView.tree();
+    auto &ele             = localView.element();
+    auto &fe              = tree.finiteElement();
     Eigen::VectorX<ScalarType> wNodal;
     wNodal.setZero(fe.size());
     Dune::CachedLocalBasis localBasis(fe.localBasis());
@@ -85,10 +87,10 @@ class KirchhoffPlate : public FEBase<Basis_, useFlat, FERequirements_, useEigenR
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     if (dx) {
       for (auto i = 0U; i < fe.size(); ++i)
-        wNodal(i) = dx.value()[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+        wNodal(i) = dx.value()[i] + wGlobal[localView.index(tree.localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < fe.size(); ++i)
-        wNodal(i) = wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+        wNodal(i) = wGlobal[localView.index(tree.localIndex(i))[0]];
     }
 
     /// Calculate Kirchhoff plate energy
@@ -121,7 +123,7 @@ class KirchhoffPlate : public FEBase<Basis_, useFlat, FERequirements_, useEigenR
     /// Clamp boundary using penalty method
     const double penaltyFactor = 1e8;
     if (ele.hasBoundaryIntersections())
-      for (auto &intersection : intersections(this->localView().globalBasis().gridView(), ele))
+      for (auto &intersection : intersections(localView.globalBasis().gridView(), ele))
         if (intersection.boundary()) {
           const auto &rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
           Eigen::MatrixX2d dN_xi_eta;

@@ -33,10 +33,10 @@
 
 using namespace Ikarus;
 using namespace Dune::Indices;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false, bool useFlat = true>
-struct Solid : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
+template <typename Basis_>
+struct Solid : public FEBase<Basis_> {
  public:
-  using Base              = FEBase<Basis_, useFlat, FERequirements_, useEigenRef>;
+  using Base              = FEBase<Basis_>;
   using Traits            = typename Base::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
@@ -58,12 +58,14 @@ struct Solid : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
   template <class ScalarType>
   auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
                                                          = std::nullopt) const -> ScalarType {
-    const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda = par.getParameter(Ikarus::FEParameter::loadfactor);
-    Eigen::VectorX<ScalarType> localDisp(this->localView().size());
+    const auto &d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto &lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+    const auto &localView = this->localView();
+    const auto &tree      = localView.tree();
+    Eigen::VectorX<ScalarType> localDisp(localView.size());
     localDisp.setZero();
-    auto &displacementNode = this->localView().tree().child(_0, 0);
-    auto &pressureNode     = this->localView().tree().child(_1);
+    auto &displacementNode = tree.child(_0, 0);
+    auto &pressureNode     = tree.child(_1);
     const auto &feDisp     = displacementNode.finiteElement();
     const auto &fePressure = pressureNode.finiteElement();
     Eigen::Matrix<ScalarType, Traits::dimension, Eigen::Dynamic> disp;
@@ -74,24 +76,23 @@ struct Solid : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
     if (dx) {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-          disp.col(i)(k2) = dx.value()[i * Traits::mydim + k2]
-                            + d[this->localView().index(this->localView().tree().child(_0, k2).localIndex(i))[0]];
+          disp.col(i)(k2)
+              = dx.value()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
-        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i]
-                + d[this->localView().index(this->localView().tree().child(_1).localIndex(i))[0]];
+        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-          disp.col(i)(k2) = d[this->localView().index(this->localView().tree().child(_0, k2).localIndex(i))[0]];
+          disp.col(i)(k2) = d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
-        pN[i] = d[this->localView().index(this->localView().tree().child(_1).localIndex(i))[0]];
+        pN[i] = d[localView.index(tree.child(_1).localIndex(i))[0]];
     }
 
     ScalarType energy = 0.0;
 
     const int order  = 2 * (feDisp.localBasis().order());
-    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(this->localView().element().type(), order);
-    const auto geo   = this->localView().element().geometry();
+    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView.element().type(), order);
+    const auto geo   = localView.element().geometry();
     Dune::CachedLocalBasis localBasisDisp(feDisp.localBasis());
     Dune::CachedLocalBasis localBasisPressure(fePressure.localBasis());
     Eigen::Matrix<double, Eigen::Dynamic, Traits::mydim> dNdisp;

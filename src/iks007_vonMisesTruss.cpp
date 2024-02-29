@@ -37,10 +37,10 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false, bool useFlat = true>
-class Truss : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
+template <typename Basis_>
+class Truss : public FEBase<Basis_> {
  public:
-  using Base              = FEBase<Basis_, useFlat, FERequirements_, useEigenRef>;
+  using Base              = FEBase<Basis_>;
   using Traits            = typename Base::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
@@ -58,24 +58,24 @@ class Truss : public FEBase<Basis_, useFlat, FERequirements_, useEigenRef> {
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
                                                          = std::nullopt) const -> ScalarType {
-    const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda = par.getParameter(FEParameter::loadfactor);
-
-    auto &ele     = this->localView().element();
-    const auto X1 = Dune::toEigen(ele.geometry().corner(0));
-    const auto X2 = Dune::toEigen(ele.geometry().corner(1));
+    const auto &d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto &lambda    = par.getParameter(FEParameter::loadfactor);
+    const auto &localView = this->localView();
+    const auto &tree      = localView.tree();
+    auto &ele             = localView.element();
+    const auto X1         = Dune::toEigen(ele.geometry().corner(0));
+    const auto X2         = Dune::toEigen(ele.geometry().corner(1));
 
     Eigen::Matrix<ScalarType, Traits::worlddim, 2> u;
     u.setZero();
     if (dx) {
       for (int i = 0; i < 2; ++i)
         for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-          u.col(i)(k2) = dx.value()[Traits::worlddim * i + k2]
-                         + d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+          u.col(i)(k2) = dx.value()[Traits::worlddim * i + k2] + d[localView.index(tree.child(k2).localIndex(i))[0]];
     } else {
       for (int i = 0; i < 2; ++i)
         for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-          u.col(i)(k2) = d[this->localView().index(this->localView().tree().child(k2).localIndex(i))[0]];
+          u.col(i)(k2) = d[localView.index(tree.child(k2).localIndex(i))[0]];
     }
 
     const Eigen::Vector2<ScalarType> x1 = X1 + u.col(0);
