@@ -20,9 +20,8 @@
 #include <Eigen/Dense>
 
 #include <ikarus/assembler/simpleassemblers.hh>
-#include <ikarus/finiteelements/febases/autodifffe.hh>
-#include <ikarus/finiteelements/febases/scalarfe.hh>
-#include <ikarus/finiteelements/fetraits.hh>
+#include <ikarus/finiteelements/autodiff/autodifffe.hh>
+#include <ikarus/finiteelements/febase.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -36,22 +35,21 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-class KirchhoffPlate : public ScalarFieldFE<Basis_> {
+template <typename Basis_>
+class KirchhoffPlate : public FEBase<Basis_> {
  public:
-  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
-  using Basis             = typename Traits::Basis;
+  using Base              = FEBase<Basis_>;
+  using Traits            = typename Base::Traits;
+  using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using BaseDisp          = ScalarFieldFE<Basis>;  // Handles globalIndices function
 
-  KirchhoffPlate(const Basis &basis, const typename LocalView::Element &element, double p_Emodul, double p_nu,
-                 double p_thickness)
-      : BaseDisp(basis, element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
-    this->localView().bind(element);
+  KirchhoffPlate(const BasisHandler &basisHandler, const typename LocalView::Element &element, double p_Emodul,
+                 double p_nu, double p_thickness)
+      : Base(basisHandler, element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
     geometry_.emplace(this->localView().element().geometry());
   }
 
@@ -73,12 +71,14 @@ class KirchhoffPlate : public ScalarFieldFE<Basis_> {
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
                                                          = std::nullopt) const -> ScalarType {
-    const auto &wGlobal = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda  = par.getParameter(Ikarus::FEParameter::loadfactor);
-    const auto D        = constitutiveMatrix(Emodul, nu, thickness);
-    ScalarType energy   = 0.0;
-    auto &ele           = this->localView().element();
-    auto &fe            = this->localView().tree().finiteElement();
+    const auto &wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto &lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+    const auto D          = constitutiveMatrix(Emodul, nu, thickness);
+    ScalarType energy     = 0.0;
+    const auto &localView = this->localView();
+    const auto &tree      = localView.tree();
+    auto &ele             = localView.element();
+    auto &fe              = tree.finiteElement();
     Eigen::VectorX<ScalarType> wNodal;
     wNodal.setZero(fe.size());
     Dune::CachedLocalBasis localBasis(fe.localBasis());
@@ -87,10 +87,10 @@ class KirchhoffPlate : public ScalarFieldFE<Basis_> {
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     if (dx) {
       for (auto i = 0U; i < fe.size(); ++i)
-        wNodal(i) = dx.value()[i] + wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+        wNodal(i) = dx.value()[i] + wGlobal[localView.index(tree.localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < fe.size(); ++i)
-        wNodal(i) = wGlobal[this->localView().index(this->localView().tree().localIndex(i))[0]];
+        wNodal(i) = wGlobal[localView.index(tree.localIndex(i))[0]];
     }
 
     /// Calculate Kirchhoff plate energy
@@ -123,7 +123,7 @@ class KirchhoffPlate : public ScalarFieldFE<Basis_> {
     /// Clamp boundary using penalty method
     const double penaltyFactor = 1e8;
     if (ele.hasBoundaryIntersections())
-      for (auto &intersection : intersections(this->localView().globalBasis().gridView(), ele))
+      for (auto &intersection : intersections(localView.globalBasis().gridView(), ele))
         if (intersection.boundary()) {
           const auto &rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
           Eigen::MatrixX2d dN_xi_eta;

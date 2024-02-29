@@ -22,8 +22,8 @@
 #include <autodiff/forward/dual/dual.hpp>
 
 #include <ikarus/assembler/simpleassemblers.hh>
-#include <ikarus/finiteelements/febases/autodifffe.hh>
-#include <ikarus/finiteelements/fetraits.hh>
+#include <ikarus/finiteelements/autodiff/autodifffe.hh>
+#include <ikarus/finiteelements/febase.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -33,55 +33,39 @@
 
 using namespace Ikarus;
 using namespace Dune::Indices;
-template <typename Basis_, typename FERequirements_ = FErequirements<>, bool useEigenRef = false>
-struct Solid {
+template <typename Basis_>
+struct Solid : public FEBase<Basis_> {
  public:
-  using Traits            = FETraits<Basis_, FERequirements_, useEigenRef>;
-  using Basis             = typename Traits::Basis;
+  using Base              = FEBase<Basis_>;
+  using Traits            = typename Base::Traits;
+  using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
+  using GlobalIndex       = typename Traits::GlobalIndex;
 
-  Solid(const Basis &basis, const typename LocalView::Element &element, double emod, double nu)
-      : localView_{basis.flat().localView()}, emod_{emod}, nu_{nu} {
-    localView_.bind(element);
+  Solid(const BasisHandler &basisHandler, const typename LocalView::Element &element, double emod, double nu)
+      : Base(basisHandler, element), emod_{emod}, nu_{nu} {
     mu_       = emod_ / (2 * (1 + nu_));
     lambdaMat = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
-  using GlobalIndex = typename LocalView::MultiIndex;
-  void globalFlatIndices(std::vector<GlobalIndex> &globalIndices) const {
-    const auto &feDisp = localView_.tree().child(_0, 0).finiteElement();
-    for (size_t i = 0; i < feDisp.size(); ++i) {
-      for (int j = 0; j < Traits::worlddim; ++j) {
-        globalIndices.push_back(localView_.index((localView_.tree().child(_0, j).localIndex(i))));
-      }
-    }
-    const auto &fePressure = localView_.tree().child(_1).finiteElement();
-    for (size_t i = 0; i < fePressure.size(); ++i) {
-      globalIndices.push_back(localView_.index((localView_.tree().child(_1).localIndex(i))));
-    }
-  }
-
   inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
-
-  [[nodiscard]] constexpr int size() const { return localView_.size(); }
-  const Element &gridElement() { return localView_.element(); }
-  const LocalView &localView() const { return localView_; }
-  LocalView &localView() { return localView_; }
 
  protected:
   template <class ScalarType>
   auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
                                                          = std::nullopt) const -> ScalarType {
-    const auto &d      = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda = par.getParameter(Ikarus::FEParameter::loadfactor);
-    Eigen::VectorX<ScalarType> localDisp(localView_.size());
+    const auto &d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto &lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+    const auto &localView = this->localView();
+    const auto &tree      = localView.tree();
+    Eigen::VectorX<ScalarType> localDisp(localView.size());
     localDisp.setZero();
-    auto &displacementNode = localView_.tree().child(_0, 0);
-    auto &pressureNode     = localView_.tree().child(_1);
+    auto &displacementNode = tree.child(_0, 0);
+    auto &pressureNode     = tree.child(_1);
     const auto &feDisp     = displacementNode.finiteElement();
     const auto &fePressure = pressureNode.finiteElement();
     Eigen::Matrix<ScalarType, Traits::dimension, Eigen::Dynamic> disp;
@@ -92,24 +76,23 @@ struct Solid {
     if (dx) {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-          disp.col(i)(k2) = dx.value()[i * Traits::mydim + k2]
-                            + d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
+          disp.col(i)(k2)
+              = dx.value()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
-        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i]
-                + d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
+        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-          disp.col(i)(k2) = d[localView_.index(localView_.tree().child(_0, k2).localIndex(i))[0]];
+          disp.col(i)(k2) = d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
-        pN[i] = d[localView_.index(localView_.tree().child(_1).localIndex(i))[0]];
+        pN[i] = d[localView.index(tree.child(_1).localIndex(i))[0]];
     }
 
     ScalarType energy = 0.0;
 
     const int order  = 2 * (feDisp.localBasis().order());
-    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView_.element().type(), order);
-    const auto geo   = localView_.element().geometry();
+    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView.element().type(), order);
+    const auto geo   = localView.element().geometry();
     Dune::CachedLocalBasis localBasisDisp(feDisp.localBasis());
     Dune::CachedLocalBasis localBasisPressure(fePressure.localBasis());
     Eigen::Matrix<double, Eigen::Dynamic, Traits::mydim> dNdisp;
@@ -143,7 +126,6 @@ struct Solid {
   }
 
  private:
-  LocalView localView_;
   double emod_;
   double nu_;
   double mu_;
