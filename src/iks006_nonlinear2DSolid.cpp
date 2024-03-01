@@ -51,7 +51,7 @@
 #define gridType 2
 #define solverType 0
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
   using namespace Ikarus;
   constexpr int gridDim = 2;
@@ -78,14 +78,17 @@ int main(int argc, char **argv) {
   constexpr auto dimworld              = 2;
   const std::array<int, gridDim> order = {2, 2};
 
-  const std::array<std::vector<double>, gridDim> knotSpans = {{{0, 0, 0, 1, 1, 1}, {0, 0, 0, 1, 1, 1}}};
+  const std::array<std::vector<double>, gridDim> knotSpans = {
+      {{0, 0, 0, 1, 1, 1}, {0, 0, 0, 1, 1, 1}}
+  };
 
   using ControlPoint = Dune::IGA::NURBSPatchData<gridDim, dimworld>::ControlPointType;
 
-  const std::vector<std::vector<ControlPoint>> controlPoints
-      = {{{.p = {0, 0}, .w = 5}, {.p = {0.5, 0}, .w = 1}, {.p = {1, 0}, .w = 1}},
-         {{.p = {0, 0.5}, .w = 1}, {.p = {0.5, 0.5}, .w = 10}, {.p = {1, 0.5}, .w = 1}},
-         {{.p = {0, 1}, .w = 1}, {.p = {0.5, 1}, .w = 1}, {.p = {1, 1}, .w = 1}}};
+  const std::vector<std::vector<ControlPoint>> controlPoints = {
+      {  {.p = {0, 0}, .w = 5},    {.p = {0.5, 0}, .w = 1},   {.p = {1, 0}, .w = 1}},
+      {{.p = {0, 0.5}, .w = 1}, {.p = {0.5, 0.5}, .w = 10}, {.p = {1, 0.5}, .w = 1}},
+      {  {.p = {0, 1}, .w = 1},    {.p = {0.5, 1}, .w = 1},   {.p = {1, 1}, .w = 1}}
+  };
 
   std::array<int, gridDim> dimsize = {(int)(controlPoints.size()), (int)(controlPoints[0].size())};
 
@@ -101,7 +104,7 @@ int main(int argc, char **argv) {
 #endif
 
   auto gridView        = grid->leafGridView();
-  const auto &indexSet = gridView.indexSet();
+  const auto& indexSet = gridView.indexSet();
 
   Dune::BitSetVector<1> neumannVertices(gridView.size(2), false);
 
@@ -114,7 +117,7 @@ int main(int argc, char **argv) {
 
   auto pythonNeumannVertices = Python::make_function<bool>(Python::evaluate(lambdaNeumannVertices));
 
-  for (auto &&vertex : vertices(gridView)) {
+  for (auto&& vertex : vertices(gridView)) {
     bool isNeumann                          = pythonNeumannVertices(vertex.geometry().corner(0));
     neumannVertices[indexSet.index(vertex)] = isNeumann;
   }
@@ -136,7 +139,7 @@ int main(int argc, char **argv) {
   std::cout << gridView.size(0) << " elements" << std::endl;
   std::cout << basis.flat().size() << " Dofs" << std::endl;
 
-  //  draw(gridView);
+  // draw(gridView);
 
   auto localView = basis.flat().localView();
 
@@ -146,27 +149,28 @@ int main(int argc, char **argv) {
   auto reducedMat = planeStress(matSVK, 1e-8);
   std::vector<Ikarus::NonLinearElastic<decltype(basis), decltype(reducedMat)>> fes;
 
-  auto volumeLoad = [](auto &globalCoord, auto &lamb) {
+  auto volumeLoad = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
     return fext;
   };
 
-  auto neumannBoundaryLoad = [](auto &globalCoord, auto &lamb) {
+  auto neumannBoundaryLoad = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
     fext[1] = lamb / 40;
     return fext;
   };
 
-  for (auto &element : elements(gridView))
+  for (auto& element : elements(gridView))
     fes.emplace_back(basis, element, reducedMat, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
 
   auto basisP = std::make_shared<const decltype(basis)>(basis);
   Ikarus::DirichletValues dirichletValues(basisP->flat());
 
-  dirichletValues.fixBoundaryDOFs([&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
-    if (std::abs(intersection.geometry().center()[1]) < 1e-8) dirichletFlags[localView.index(localIndex)] = true;
+  dirichletValues.fixBoundaryDOFs([&](auto& dirichletFlags, auto&& localIndex, auto&& localView, auto&& intersection) {
+    if (std::abs(intersection.geometry().center()[1]) < 1e-8)
+      dirichletFlags[localView.index(localIndex)] = true;
   });
 
   auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
@@ -177,26 +181,26 @@ int main(int argc, char **argv) {
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-  auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+  auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getVector(req);
   };
 
-  auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+  auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getMatrix(req);
   };
 
-  auto energyFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+  auto energyFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseAssembler.getScalar(req);
   };
 
-  auto nonLinOp
-      = Ikarus::NonLinearOperator(functions(energyFunction, residualFunction, KFunction), parameter(d, lambda));
+  auto nonLinOp =
+      Ikarus::NonLinearOperator(functions(energyFunction, residualFunction, KFunction), parameter(d, lambda));
 
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_UmfPackLU);
 
@@ -231,8 +235,8 @@ int main(int argc, char **argv) {
   std::cout << "Energy after: " << nonLinOp.value() << std::endl;
 
   // Postprocessing
-  auto displacementFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
+  auto displacementFunction =
+      Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
   auto stressFunction   = Ikarus::makeResultFunction<ResultType::PK2Stress>(&fes, req);
   auto vonMisesFunction = Ikarus::makeResultFunction<ResultType::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
 

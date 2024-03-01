@@ -34,7 +34,7 @@
 using namespace Ikarus;
 using namespace Dune::Indices;
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   auto start = std::chrono::high_resolution_clock::now();
   Ikarus::init(argc, argv);
   constexpr int gridDim     = 2;
@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
   Dune::ParameterTree parameterSet;
   Dune::ParameterTreeParser::readINITree(argv[1], parameterSet);
 
-  const Dune::ParameterTree &gridParameters     = parameterSet.sub("GridParameters");
-  const Dune::ParameterTree &controlParameters  = parameterSet.sub("ControlParameters");
-  const Dune::ParameterTree &materialParameters = parameterSet.sub("MaterialParameters");
+  const Dune::ParameterTree& gridParameters     = parameterSet.sub("GridParameters");
+  const Dune::ParameterTree& controlParameters  = parameterSet.sub("ControlParameters");
+  const Dune::ParameterTree& materialParameters = parameterSet.sub("MaterialParameters");
 
   const double E             = materialParameters.get<double>("E");
   const double nu            = materialParameters.get<double>("nu");
@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
     dispVec.clear();
     timeVec.clear();
     auto grid = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook.msh", false);
-    //  auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook_tri.msh", false);
-    //  auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook_unstructured.msh", false);
+    // auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook_tri.msh", false);
+    // auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/cook_unstructured.msh", false);
     for (size_t ref = 0; ref < refinement_level; ++ref) {
       auto start                 = std::chrono::high_resolution_clock::now();
       auto gridView              = grid->leafGridView();
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
       auto basisP = std::make_shared<const decltype(basis)>(basis);
       Ikarus::DirichletValues dirichletValues(basisP->flat());
       dirichletValues.fixBoundaryDOFs(
-          [&](auto &dirichletFlags, auto &&localIndex, auto &&localView, auto &&intersection) {
+          [&](auto& dirichletFlags, auto&& localIndex, auto&& localView, auto&& intersection) {
             if (std::abs(intersection.geometry().center()[0]) < 1e-8)
               dirichletFlags[localView.index(localIndex)] = true;
           });
@@ -101,14 +101,14 @@ int main(int argc, char **argv) {
       std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(basis)>>> fes;
 
       /// function for volume load- here: returns zero
-      auto volumeLoad = [](auto &globalCoord, auto &lamb) {
+      auto volumeLoad = [](auto& globalCoord, auto& lamb) {
         Eigen::Vector2d fext;
         fext.setZero();
         return fext;
       };
 
       /// neumann boundary load in vertical direction
-      auto neumannBoundaryLoad = [&](auto &globalCoord, auto &lamb) {
+      auto neumannBoundaryLoad = [&](auto& globalCoord, auto& lamb) {
         Eigen::Vector2d F = Eigen::Vector2d::Zero();
         F[1]              = lamb / 16.0;
         return F;
@@ -122,20 +122,20 @@ int main(int argc, char **argv) {
 
       Python::runStream() << std::endl << "import sys" << std::endl << "import os" << std::endl;
 
-      const auto &indexSet = gridView.indexSet();
+      const auto& indexSet = gridView.indexSet();
 
       /// Flagging the vertices on which neumann load is applied as true
       Dune::BitSetVector<1> neumannVertices(gridView.size(2), false);
       auto pythonNeumannVertices = Python::make_function<bool>(Python::evaluate(lambdaNeumannVertices));
 
-      for (auto &&vertex : vertices(gridView)) {
+      for (auto&& vertex : vertices(gridView)) {
         bool isNeumann                          = pythonNeumannVertices(vertex.geometry().corner(0));
         neumannVertices[indexSet.index(vertex)] = isNeumann;
       }
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
-      for (auto &element : elements(gridView)) {
+      for (auto& element : elements(gridView)) {
         fes.emplace_back(basis, element, E, nu, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
         fes.back().setEASType(numberOfEASParameters);
       }
@@ -144,13 +144,13 @@ int main(int argc, char **argv) {
 
       auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-      auto KFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+      auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
         req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
             .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
         return sparseAssembler.getMatrix(req);
       };
 
-      auto residualFunction = [&](auto &&disp, auto &&lambdaLocal) -> auto & {
+      auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
         req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
             .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
         return sparseAssembler.getVector(req);
@@ -166,8 +166,8 @@ int main(int argc, char **argv) {
                    durationAssembly.count(), numberOfEASParameters, basis.flat().size());
       ;
       timeVec.push_back(durationAssembly.count());
-      const auto &K    = nonLinOp.derivative();
-      const auto &Fext = nonLinOp.value();
+      const auto& K    = nonLinOp.derivative();
+      const auto& Fext = nonLinOp.value();
 
       /// solve the linear system
       auto linSolver   = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_CholmodSupernodalLLT);
@@ -181,8 +181,8 @@ int main(int argc, char **argv) {
                    durationSolver.count(), numberOfEASParameters, ref);
 
       /// Postprocess
-      auto dispGlobalFunc
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), D_Glob);
+      auto dispGlobalFunc =
+          Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), D_Glob);
       Dune::VTKWriter vtkWriter(gridView, Dune::VTK::conforming);
       vtkWriter.addVertexData(dispGlobalFunc,
                               Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
       double uy_fe   = 0.0;
       Eigen::Vector2d req_pos;
       req_pos << 48.0, 60.0;
-      for (auto &ele : elements(gridView)) {
+      for (auto& ele : elements(gridView)) {
         localView.bind(ele);
         localw.bind(ele);
         const auto geo = localView.element().geometry();
@@ -245,8 +245,8 @@ int main(int argc, char **argv) {
   auto legend2 = axesSecondPlot->legend();
   legend->location(legend::general_alignment::bottomright);
   legend2->location(legend::general_alignment::bottomright);
-  //  f->draw();
-  //  f2->draw();
+  // f->draw();
+  // f2->draw();
   using namespace std::chrono_literals;
   std::this_thread::sleep_for(5s);
 }

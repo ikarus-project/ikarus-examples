@@ -34,8 +34,9 @@
 using namespace Ikarus;
 using namespace Dune::Indices;
 template <typename Basis_>
-struct Solid : public FEBase<Basis_> {
- public:
+struct Solid : public FEBase<Basis_>
+{
+public:
   using Base              = FEBase<Basis_>;
   using Traits            = typename Base::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
@@ -46,28 +47,31 @@ struct Solid : public FEBase<Basis_> {
   using Element           = typename Traits::Element;
   using GlobalIndex       = typename Traits::GlobalIndex;
 
-  Solid(const BasisHandler &basisHandler, const typename LocalView::Element &element, double emod, double nu)
-      : Base(basisHandler, element), emod_{emod}, nu_{nu} {
+  Solid(const BasisHandler& basisHandler, const typename LocalView::Element& element, double emod, double nu)
+      : Base(basisHandler, element),
+        emod_{emod},
+        nu_{nu} {
     mu_       = emod_ / (2 * (1 + nu_));
     lambdaMat = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
-  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
+  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
 
- protected:
+protected:
   template <class ScalarType>
-  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
-                                                         = std::nullopt) const -> ScalarType {
-    const auto &d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
-    const auto &localView = this->localView();
-    const auto &tree      = localView.tree();
+  auto calculateScalarImpl(const FERequirementType& par,
+                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
+      -> ScalarType {
+    const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+    const auto& localView = this->localView();
+    const auto& tree      = localView.tree();
     Eigen::VectorX<ScalarType> localDisp(localView.size());
     localDisp.setZero();
-    auto &displacementNode = tree.child(_0, 0);
-    auto &pressureNode     = tree.child(_1);
-    const auto &feDisp     = displacementNode.finiteElement();
-    const auto &fePressure = pressureNode.finiteElement();
+    auto& displacementNode = tree.child(_0, 0);
+    auto& pressureNode     = tree.child(_1);
+    const auto& feDisp     = displacementNode.finiteElement();
+    const auto& fePressure = pressureNode.finiteElement();
     Eigen::Matrix<ScalarType, Traits::dimension, Eigen::Dynamic> disp;
     disp.setZero(Eigen::NoChange, feDisp.size());
     Eigen::Vector<ScalarType, Eigen::Dynamic> pN;
@@ -76,8 +80,8 @@ struct Solid : public FEBase<Basis_> {
     if (dx) {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
-          disp.col(i)(k2)
-              = dx.value()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
+          disp.col(i)(k2) =
+              dx.value()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
         pN[i] = dx.value()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
     } else {
@@ -91,14 +95,14 @@ struct Solid : public FEBase<Basis_> {
     ScalarType energy = 0.0;
 
     const int order  = 2 * (feDisp.localBasis().order());
-    const auto &rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView.element().type(), order);
+    const auto& rule = Dune::QuadratureRules<double, Traits::mydim>::rule(localView.element().type(), order);
     const auto geo   = localView.element().geometry();
     Dune::CachedLocalBasis localBasisDisp(feDisp.localBasis());
     Dune::CachedLocalBasis localBasisPressure(fePressure.localBasis());
     Eigen::Matrix<double, Eigen::Dynamic, Traits::mydim> dNdisp;
     Eigen::VectorXd Ndisp;
     Eigen::VectorXd Npressure;
-    for (auto &&gp : rule) {
+    for (auto&& gp : rule) {
       const auto J = Dune::toEigen(geo.jacobianTransposed(gp.position())).transpose().eval();
       localBasisDisp.evaluateFunctionAndJacobian(gp.position(), Ndisp, dNdisp);
       localBasisPressure.evaluateFunction(gp.position(), Npressure);
@@ -118,21 +122,21 @@ struct Solid : public FEBase<Basis_> {
       fext[1] = lambda;
       fext[0] = 0 * lambda;
 
-      energy += (0.5 * (2 * mu_ * symgradu.squaredNorm() - 1 / lambdaMat * Dune::power(pressure, 2)) + pressure * divU
-                 - x.dot(fext))
-                * geo.integrationElement(gp.position()) * gp.weight();  // plane strain for 2D
+      energy += (0.5 * (2 * mu_ * symgradu.squaredNorm() - 1 / lambdaMat * Dune::power(pressure, 2)) + pressure * divU -
+                 x.dot(fext)) *
+                geo.integrationElement(gp.position()) * gp.weight(); // plane strain for 2D
     }
     return energy;
   }
 
- private:
+private:
   double emod_;
   double nu_;
   double mu_;
   double lambdaMat;
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   using namespace Dune::Functions;
   /// Construct grid
   Ikarus::init(argc, argv);
@@ -150,7 +154,7 @@ int main(int argc, char **argv) {
   std::array<int, 2> elementsPerDirection = {elex, eley};
   auto grid                               = std::make_shared<Grid>(bbox, elementsPerDirection);
   auto gridView                           = grid->leafGridView();
-  //  draw(gridView);
+  // draw(gridView);
 
   using namespace Dune::Functions::BasisFactory;
   /// Construct basis
@@ -160,16 +164,16 @@ int main(int argc, char **argv) {
   const double Emod = 2.1e1;
   const double nu   = 0.5;
   std::vector<AutoDiffFE<Solid<decltype(basis)>>> fes;
-  for (auto &ele : elements(gridView))
+  for (auto& ele : elements(gridView))
     fes.emplace_back(basis, ele, Emod, nu);
 
   /// Collect dirichlet nodes
   auto basisP = std::make_shared<const decltype(basis)>(basis);
   Ikarus::DirichletValues dirichletValues(basisP->flat());
 
-  dirichletValues.fixDOFs([](auto &basis_, auto &dirichletFlags) {
+  dirichletValues.fixDOFs([](auto& basis_, auto& dirichletFlags) {
     Dune::Functions::forEachBoundaryDOF(subspaceBasis(basis_, _0),
-                                        [&](auto &&localIndex, auto &&localView, auto &&intersection) {
+                                        [&](auto&& localIndex, auto&& localView, auto&& intersection) {
                                           if (std::abs(intersection.geometry().center()[1]) < 1e-8)
                                             dirichletFlags[localView.index(localIndex)] = true;
                                         });
@@ -185,12 +189,12 @@ int main(int argc, char **argv) {
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-  auto fextFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
+  auto fextFunction = [&](auto&& lambdaLocal, auto&& dLocal) -> auto& {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseFlatAssembler.getReducedVector(req);
   };
-  auto KFunction = [&](auto &&lambdaLocal, auto &&dLocal) -> auto & {
+  auto KFunction = [&](auto&& lambdaLocal, auto&& dLocal) -> auto& {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return sparseFlatAssembler.getReducedMatrix(req);
@@ -200,10 +204,12 @@ int main(int argc, char **argv) {
   auto R = fextFunction(1.0, d);
   Eigen::SparseLU<decltype(K)> ld;
   ld.compute(K);
-  if (ld.info() != Eigen::Success) DUNE_THROW(Dune::MathError, "Failed Compute");
+  if (ld.info() != Eigen::Success)
+    DUNE_THROW(Dune::MathError, "Failed Compute");
 
   d -= sparseFlatAssembler.createFullVector(ld.solve(R));
-  if (ld.info() != Eigen::Success) DUNE_THROW(Dune::MathError, "Failed Solve");
+  if (ld.info() != Eigen::Success)
+    DUNE_THROW(Dune::MathError, "Failed Solve");
 
   /// Postprocess
   auto disp = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(

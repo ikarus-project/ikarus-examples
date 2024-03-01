@@ -27,8 +27,8 @@ using namespace Dune::Functions::BasisFactory;
 using namespace Dune::Functions;
 using namespace Dune::Indices;
 
-void TimoshenkoBeamStiffness(auto &KLocal, auto &localView, auto &gridElement, auto &quadratureRule,
-                             const Eigen::Matrix2d &C) {
+void TimoshenkoBeamStiffness(auto& KLocal, auto& localView, auto& gridElement, auto& quadratureRule,
+                             const Eigen::Matrix2d& C) {
   using namespace Dune::Indices;
 
   auto wFE   = localView.tree().child(_0);
@@ -52,7 +52,7 @@ void TimoshenkoBeamStiffness(auto &KLocal, auto &localView, auto &gridElement, a
   Eigen::Matrix2Xd B;
 
   /// integration point loop
-  for (auto &gp : quadratureRule) {
+  for (auto& gp : quadratureRule) {
     // evaluate ansatz functions and their derivatives
     basisW.evaluateJacobian(gp.position(), dNwDxi);
     basisPhi.evaluateFunction(gp.position(), Nphi);
@@ -74,17 +74,21 @@ void TimoshenkoBeamStiffness(auto &KLocal, auto &localView, auto &gridElement, a
   }
 }
 
-enum class TimoshenkoBeam { w, phi };
+enum class TimoshenkoBeam
+{
+  w,
+  phi
+};
 
-unsigned int getGlobalDofIdImpl(const auto &basis, const double position) {
+unsigned int getGlobalDofIdImpl(const auto& basis, const double position) {
   auto localView       = basis.localView();
   auto seDOFs          = subEntityDOFs(basis);
-  const auto &gridView = basis.gridView();
-  for (auto &element : elements(gridView)) {
+  const auto& gridView = basis.gridView();
+  for (auto& element : elements(gridView)) {
     localView.bind(element);
     for (size_t i = 0U; i < element.subEntities(1); ++i) {
       if (Dune::FloatCmp::eq(element.template subEntity<1>(i).geometry().center()[0], position, 1e-8)) {
-        auto &localIndex = seDOFs.bind(localView, i, 1);
+        auto& localIndex = seDOFs.bind(localView, i, 1);
         assert(localIndex.size() == 1 && "It is expected that only one w-DOF is associated with a vertex");
         return localView.index(localIndex[0])[0];
       }
@@ -95,7 +99,7 @@ unsigned int getGlobalDofIdImpl(const auto &basis, const double position) {
              "DOFs at vertices are supported.");
 }
 
-unsigned int getGlobalDofId(TimoshenkoBeam requestedQuantity, const auto &basis, const double position) {
+unsigned int getGlobalDofId(TimoshenkoBeam requestedQuantity, const auto& basis, const double position) {
   using namespace Dune::Indices;
   if (requestedQuantity == TimoshenkoBeam::w)
     return getGlobalDofIdImpl(subspaceBasis(basis.flat(), _0), position);
@@ -105,7 +109,7 @@ unsigned int getGlobalDofId(TimoshenkoBeam requestedQuantity, const auto &basis,
     DUNE_THROW(Dune::InvalidStateException, "The requested quantity is not supported");
 }
 
-void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, double EI, double GA, double L, double F) {
+void plotDeformedTimoschenkoBeam(auto& gridView, auto& basis, auto& d_glob, double EI, double GA, double L, double F) {
   using namespace Dune::Indices;
   auto wGlobal   = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis.flat(), _0), d_glob);
   auto phiGlobal = makeDiscreteGlobalBasisFunction<double>(subspaceBasis(basis.flat(), _1), d_glob);
@@ -133,7 +137,7 @@ void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, doub
   std::vector<double> x = linspace(0, 1, 10);
   std::vector<double> x_L;
   std::vector<double> yw, yphi, ywAna, yphiAna;
-  for (auto &edge : elements(gridView)) {
+  for (auto& edge : elements(gridView)) {
     wLocal.bind(edge);
     wLocalAnalytic.bind(edge);
     phiLocal.bind(edge);
@@ -162,16 +166,16 @@ void plotDeformedTimoschenkoBeam(auto &gridView, auto &basis, auto &d_glob, doub
     l1_ana->color("red");
   }
 
-  //  f->draw();
-  //  using namespace std::chrono_literals;
-  //  std::this_thread::sleep_for(5s);
+  // f->draw();
+  // using namespace std::chrono_literals;
+  // std::this_thread::sleep_for(5s);
 }
 
 void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrderPhi, const int numElements) {
   const double b  = 1;
   const double L  = 10;
   const double E  = 1000;
-  const double G  = E / 2;  // Poisson's ratio = 0
+  const double G  = E / 2; // Poisson's ratio = 0
   const double t  = 1e-3;
   const double EI = E * b * t * t * t / 12.0;
   const double GA = G * b * t;
@@ -193,12 +197,12 @@ void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrder
   Eigen::MatrixXd KGlobal    = Eigen::MatrixXd::Zero(numDofs, numDofs);
   Eigen::MatrixXd KLocal;
 
-  for (auto &ele : elements(gridView)) {
+  for (auto& ele : elements(gridView)) {
     localView.bind(ele);
 
     /// Define the integration rule
-    const auto &rule
-        = Dune::QuadratureRules<double, 1>::rule(ele.type(), maxOrderIntegration, Dune::QuadratureType::GaussLegendre);
+    const auto& rule =
+        Dune::QuadratureRules<double, 1>::rule(ele.type(), maxOrderIntegration, Dune::QuadratureType::GaussLegendre);
 
     /// get local stiffness matrix
     TimoshenkoBeamStiffness(KLocal, localView, ele, rule, C);
@@ -235,7 +239,7 @@ void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrder
   plotDeformedTimoschenkoBeam(gridView, basis, dGlobal, EI, GA, L, F);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
   exampleTimoshenkoBeam(1, 1, 10);
   exampleTimoshenkoBeam(2, 1, 10);
