@@ -9,8 +9,8 @@
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
-auto f(double &x) { return 0.5 * x * x + x - 2; }
-auto df(double &x) { return x + 1; }
+auto f(double& x) { return 0.5 * x * x + x - 2; }
+auto df(double& x) { return x + 1; }
 
 void newtonRaphsonVeryBasicExample() {
   double x               = 13;
@@ -18,8 +18,8 @@ void newtonRaphsonVeryBasicExample() {
   const int maxIter      = 20;
   const double xExpected = std::sqrt(5.0) - 1.0;
 
-  auto fvLambda  = [&](auto &&x) { return f(x); };
-  auto dfvLambda = [&](auto &&x) { return df(x); };
+  auto fvLambda  = [&](auto&& x) { return f(x); };
+  auto dfvLambda = [&](auto&& x) { return df(x); };
   Ikarus::NonLinearOperator nonLinOp(Ikarus::functions(fvLambda, dfvLambda), Ikarus::parameter(x));
 
   /// Standard implementation
@@ -45,18 +45,20 @@ void newtonRaphsonVeryBasicExample() {
   std::cout << "expected solution: " << xExpected << "\n";
 }
 
-class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages> {
- public:
+class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages>
+{
+public:
   void updateImpl(Ikarus::NonLinearSolverMessages message) override {
-    if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED) std::cout << "Iteration started.\n";
+    if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED)
+      std::cout << "Iteration started.\n";
   }
 };
 
 void newtonRaphsonBasicExampleWithLogger() {
   double x = 13;
 
-  auto fvLambda  = [&](auto &&x) { return f(x); };
-  auto dfvLambda = [&](auto &&x) { return df(x); };
+  auto fvLambda  = [&](auto&& x) { return f(x); };
+  auto dfvLambda = [&](auto&& x) { return df(x); };
   Ikarus::NonLinearOperator nonLinOp(Ikarus::functions(fvLambda, dfvLambda), Ikarus::parameter(x));
 
   const double eps       = 1e-10;
@@ -81,7 +83,7 @@ void newtonRaphsonBasicExampleWithLogger() {
     std::cout << "The Newton-Raphson procedure failed to converge" << std::endl;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
   newtonRaphsonVeryBasicExample();
   std::cout << "\nWith Logger\n\n";

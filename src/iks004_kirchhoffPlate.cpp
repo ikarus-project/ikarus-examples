@@ -36,8 +36,9 @@
 
 using namespace Ikarus;
 template <typename Basis_>
-class KirchhoffPlate : public FEBase<Basis_> {
- public:
+class KirchhoffPlate : public FEBase<Basis_>
+{
+public:
   using Base              = FEBase<Basis_>;
   using Traits            = typename Base::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
@@ -47,9 +48,12 @@ class KirchhoffPlate : public FEBase<Basis_> {
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
 
-  KirchhoffPlate(const BasisHandler &basisHandler, const typename LocalView::Element &element, double p_Emodul,
+  KirchhoffPlate(const BasisHandler& basisHandler, const typename LocalView::Element& element, double p_Emodul,
                  double p_nu, double p_thickness)
-      : Base(basisHandler, element), Emodul{p_Emodul}, nu{p_nu}, thickness{p_thickness} {
+      : Base(basisHandler, element),
+        Emodul{p_Emodul},
+        nu{p_nu},
+        thickness{p_thickness} {
     geometry_.emplace(this->localView().element().geometry());
   }
 
@@ -65,24 +69,25 @@ class KirchhoffPlate : public FEBase<Basis_> {
     return D;
   }
 
-  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
+  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
 
- protected:
+protected:
   template <typename ScalarType>
-  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
-                                                         = std::nullopt) const -> ScalarType {
-    const auto &wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+  auto calculateScalarImpl(const FERequirementType& par,
+                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
+      -> ScalarType {
+    const auto& wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D          = constitutiveMatrix(Emodul, nu, thickness);
     ScalarType energy     = 0.0;
-    const auto &localView = this->localView();
-    const auto &tree      = localView.tree();
-    auto &ele             = localView.element();
-    auto &fe              = tree.finiteElement();
+    const auto& localView = this->localView();
+    const auto& tree      = localView.tree();
+    auto& ele             = localView.element();
+    auto& fe              = tree.finiteElement();
     Eigen::VectorX<ScalarType> wNodal;
     wNodal.setZero(fe.size());
     Dune::CachedLocalBasis localBasis(fe.localBasis());
-    const auto &rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
+    const auto& rule = Dune::QuadratureRules<double, 2>::rule(ele.type(), 2 * localBasis.order());
 
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     if (dx) {
@@ -94,12 +99,12 @@ class KirchhoffPlate : public FEBase<Basis_> {
     }
 
     /// Calculate Kirchhoff plate energy
-    for (auto &&[gpIndex, gp] : localBasis.viewOverIntegrationPoints()) {
-      auto &N          = localBasis.evaluateFunction(gpIndex);
-      auto &ddN        = localBasis.evaluateSecondDerivatives(gpIndex);
-      auto &ddN_xixi   = ddN.col(0);
-      auto &ddN_etaeta = ddN.col(1);
-      auto &ddN_xieta  = ddN.col(2);
+    for (auto&& [gpIndex, gp] : localBasis.viewOverIntegrationPoints()) {
+      auto& N          = localBasis.evaluateFunction(gpIndex);
+      auto& ddN        = localBasis.evaluateSecondDerivatives(gpIndex);
+      auto& ddN_xixi   = ddN.col(0);
+      auto& ddN_etaeta = ddN.col(1);
+      auto& ddN_xieta  = ddN.col(2);
 
       const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gp.position())).transpose().eval();
 
@@ -123,12 +128,12 @@ class KirchhoffPlate : public FEBase<Basis_> {
     /// Clamp boundary using penalty method
     const double penaltyFactor = 1e8;
     if (ele.hasBoundaryIntersections())
-      for (auto &intersection : intersections(localView.globalBasis().gridView(), ele))
+      for (auto& intersection : intersections(localView.globalBasis().gridView(), ele))
         if (intersection.boundary()) {
-          const auto &rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
+          const auto& rule1 = Dune::QuadratureRules<double, 1>::rule(intersection.type(), 2 * localBasis.order());
           Eigen::MatrixX2d dN_xi_eta;
-          for (auto &gp : rule1) {
-            const auto &gpInElement = intersection.geometryInInside().global(gp.position());
+          for (auto& gp : rule1) {
+            const auto& gpInElement = intersection.geometryInInside().global(gp.position());
             localBasis.evaluateJacobian(gpInElement, dN_xi_eta);
             Eigen::VectorXd dN_x(fe.size());
             Eigen::VectorXd dN_y(fe.size());
@@ -147,7 +152,7 @@ class KirchhoffPlate : public FEBase<Basis_> {
     return energy;
   }
 
- private:
+private:
   /// Dune::Geometry<...> is not copy assignable, see https://gitlab.dune-project.org/core/dune-grid/-/issues/140,
   /// Thus, we wrap it inside a std::optional
   std::optional<typename LocalView::Element::Geometry> geometry_;
@@ -157,21 +162,25 @@ class KirchhoffPlate : public FEBase<Basis_> {
   double thickness;
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
 
   /// Create 2D nurbs grid
   using namespace Ikarus;
   constexpr int griddim                                    = 2;
   constexpr int dimworld                                   = 2;
-  const std::array<std::vector<double>, griddim> knotSpans = {{{0, 0, 1, 1}, {0, 0, 1, 1}}};
+  const std::array<std::vector<double>, griddim> knotSpans = {
+      {{0, 0, 1, 1}, {0, 0, 1, 1}}
+  };
 
   using ControlPoint = Dune::IGA::NURBSPatchData<griddim, dimworld>::ControlPointType;
 
-  const double Lx = 10;
-  const double Ly = 10;
-  const std::vector<std::vector<ControlPoint>> controlPoints
-      = {{{.p = {0, 0}, .w = 1}, {.p = {0, Ly}, .w = 1}}, {{.p = {Lx, 0}, .w = 1}, {.p = {Lx, Ly}, .w = 1}}};
+  const double Lx                                            = 10;
+  const double Ly                                            = 10;
+  const std::vector<std::vector<ControlPoint>> controlPoints = {
+      { {.p = {0, 0}, .w = 1},  {.p = {0, Ly}, .w = 1}},
+      {{.p = {Lx, 0}, .w = 1}, {.p = {Lx, Ly}, .w = 1}}
+  };
 
   std::array<int, griddim> dimsize = {2, 2};
 
@@ -191,7 +200,7 @@ int main(int argc, char **argv) {
 
   for (int ref = 0; ref < 5; ++ref) {
     auto gridView = grid.leafGridView();
-    //    draw(gridView);
+    // draw(gridView);
     using namespace Dune::Functions::BasisFactory;
     /// Create nurbs basis with extracted preBase from grid
     auto basis = Ikarus::makeBasis(gridView, nurbs());
@@ -199,7 +208,7 @@ int main(int argc, char **argv) {
     auto basisP = std::make_shared<const decltype(basis)>(basis);
     Ikarus::DirichletValues dirichletValues(basisP->flat());
     dirichletValues.fixBoundaryDOFs(
-        [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
+        [&](auto& dirichletFlags, auto&& globalIndex) { dirichletFlags[globalIndex] = true; });
 
     /// Create finite elements
     auto localView         = basis.flat().localView();
@@ -207,7 +216,7 @@ int main(int argc, char **argv) {
     const double nu        = 0.3;
     const double thickness = 0.1;
     std::vector<AutoDiffFE<KirchhoffPlate<decltype(basis)>>> fes;
-    for (auto &ele : elements(gridView))
+    for (auto& ele : elements(gridView))
       fes.emplace_back(basis, ele, Emod, nu, thickness);
 
     /// Create assembler
@@ -221,20 +230,20 @@ int main(int argc, char **argv) {
 
     auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-    auto kFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
+    auto kFunction = [&](auto&& disp_, auto&& lambdaLocal) -> auto& {
       req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
           .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
       return denseAssembler.getMatrix(req);
     };
 
-    auto rFunction = [&](auto &&disp_, auto &&lambdaLocal) -> auto & {
+    auto rFunction = [&](auto&& disp_, auto&& lambdaLocal) -> auto& {
       req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
           .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
       return denseAssembler.getVector(req);
     };
 
-    const auto &K = kFunction(w, totalLoad);
-    const auto &R = rFunction(w, totalLoad);
+    const auto& K = kFunction(w, totalLoad);
+    const auto& R = rFunction(w, totalLoad);
     Eigen::LDLT<Eigen::MatrixXd> solver;
     solver.compute(K);
     w -= solver.solve(R);
@@ -252,12 +261,12 @@ int main(int argc, char **argv) {
       double w                = 0.0;
       const int seriesFactors = 40;
       const double pi         = std::numbers::pi;
-      auto oddFactors
-          = std::ranges::iota_view(1, seriesFactors) | std::views::filter([](auto i) { return i % 2 != 0; });
+      auto oddFactors =
+          std::ranges::iota_view(1, seriesFactors) | std::views::filter([](auto i) { return i % 2 != 0; });
       for (auto m : oddFactors)
         for (auto n : oddFactors)
-          w += sin(m * pi * x[0] / Lx) * sin(n * pi * x[1] / Ly)
-               / (m * n * Dune::power(m * m / (Lx * Lx) + n * n / (Ly * Ly), 2));
+          w += sin(m * pi * x[0] / Lx) * sin(n * pi * x[1] / Ly) /
+               (m * n * Dune::power(m * m / (Lx * Lx) + n * n / (Ly * Ly), 2));
 
       return 16 * totalLoad / (Dune::power(pi, 6) * D) * w;
     };
@@ -265,8 +274,8 @@ int main(int argc, char **argv) {
     /// Displacement at center of clamped square plate
     // clamped sol http://faculty.ce.berkeley.edu/rlt/reports/clamp.pdf
     const double wCenterClamped = 1.265319087 / (D / (totalLoad * Dune::power(Lx, 4)) * 1000.0);
-    auto wGlobalFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(basis.flat(), w);
+    auto wGlobalFunction =
+        Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 1>>(basis.flat(), w);
     auto wGlobalAnalyticFunction = Dune::Functions::makeAnalyticGridViewFunction(wAna, gridView);
     auto localw                  = localFunction(wGlobalFunction);
     auto localwAna               = localFunction(wGlobalAnalyticFunction);
@@ -274,12 +283,12 @@ int main(int argc, char **argv) {
     /// Calculate L_2 error for simply supported case
     double l2_error  = 0.0;
     double l2_normEx = 0.0;
-    for (auto &ele : elements(gridView)) {
+    for (auto& ele : elements(gridView)) {
       localView.bind(ele);
       localw.bind(ele);
       localwAna.bind(ele);
       const auto geo   = localView.element().geometry();
-      const auto &rule = Dune::QuadratureRules<double, 2>::rule(
+      const auto& rule = Dune::QuadratureRules<double, 2>::rule(
           ele.type(), 2U * localView.tree().finiteElement().localBasis().order());
       for (auto gp : rule) {
         const auto intElement = ele.geometry().integrationElement(gp.position()) * gp.weight();

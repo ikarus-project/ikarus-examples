@@ -38,8 +38,9 @@
 
 using namespace Ikarus;
 template <typename Basis_>
-class Truss : public FEBase<Basis_> {
- public:
+class Truss : public FEBase<Basis_>
+{
+public:
   using Base              = FEBase<Basis_>;
   using Traits            = typename Base::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
@@ -49,20 +50,22 @@ class Truss : public FEBase<Basis_> {
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
 
-  Truss(const BasisHandler &basisHandler, const typename LocalView::Element &element, double p_EA)
-      : Base(basisHandler, element), EA{p_EA} {}
+  Truss(const BasisHandler& basisHandler, const typename LocalView::Element& element, double p_EA)
+      : Base(basisHandler, element),
+        EA{p_EA} {}
 
-  inline double calculateScalar(const FERequirementType &par) const { return calculateScalarImpl<double>(par); }
+  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
 
- protected:
+protected:
   template <typename ScalarType>
-  auto calculateScalarImpl(const FERequirementType &par, const std::optional<const Eigen::VectorX<ScalarType>> &dx
-                                                         = std::nullopt) const -> ScalarType {
-    const auto &d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto &lambda    = par.getParameter(FEParameter::loadfactor);
-    const auto &localView = this->localView();
-    const auto &tree      = localView.tree();
-    auto &ele             = localView.element();
+  auto calculateScalarImpl(const FERequirementType& par,
+                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
+      -> ScalarType {
+    const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
+    const auto& lambda    = par.getParameter(FEParameter::loadfactor);
+    const auto& localView = this->localView();
+    const auto& tree      = localView.tree();
+    auto& ele             = localView.element();
     const auto X1         = Dune::toEigen(ele.geometry().corner(0));
     const auto X2         = Dune::toEigen(ele.geometry().corner(1));
 
@@ -89,11 +92,11 @@ class Truss : public FEBase<Basis_> {
     return 0.5 * EA * sqrt(LRefsquared) * Egl * Egl;
   }
 
- private:
+private:
   double EA;
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
   /// Construct grid
   Dune::GridFactory<Dune::FoamGrid<1, 2, double>> gridFactory;
@@ -115,14 +118,14 @@ int main(int argc, char **argv) {
   /// Create finite elements
   const double EA = 100;
   std::vector<AutoDiffFE<Truss<decltype(basis)>>> fes;
-  for (auto &ele : elements(gridView))
+  for (auto& ele : elements(gridView))
     fes.emplace_back(basis, ele, EA);
 
   /// Collect dirichlet nodes
   auto basisP = std::make_shared<const decltype(basis)>(basis);
   Ikarus::DirichletValues dirichletValues(basisP->flat());
   dirichletValues.fixBoundaryDOFs(
-      [&](auto &dirichletFlags, auto &&globalIndex) { dirichletFlags[globalIndex] = true; });
+      [&](auto& dirichletFlags, auto&& globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
   auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletValues);
@@ -134,14 +137,14 @@ int main(int argc, char **argv) {
 
   auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
 
-  auto RFunction = [&](auto &&u, auto &&lambdaLocal) -> auto {
+  auto RFunction = [&](auto&& u, auto&& lambdaLocal) -> auto {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     auto R = denseFlatAssembler.getVector(req);
     R[3] -= -lambdaLocal;
     return R;
   };
-  auto KFunction = [&](auto &&u, auto &&lambdaLocal) -> auto & {
+  auto KFunction = [&](auto&& u, auto&& lambdaLocal) -> auto& {
     req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
         .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
     return denseFlatAssembler.getMatrix(req);
@@ -197,10 +200,10 @@ int main(int argc, char **argv) {
   xlabel("y-Displacement");
   ylabel("LoadFactor");
 
-  auto analyticalLoadDisplacementCurve = [&](auto &w) {
+  auto analyticalLoadDisplacementCurve = [&](auto& w) {
     const double Ltruss = std::sqrt(h * h + L * L);
-    return 2.0 * EA * Dune::power(h, 3) / Dune::power(Ltruss, 3)
-           * (w / h - 1.5 * Dune::power(w / h, 2) + 0.5 * Dune::power(w / h, 3));
+    return 2.0 * EA * Dune::power(h, 3) / Dune::power(Ltruss, 3) *
+           (w / h - 1.5 * Dune::power(w / h, 2) + 0.5 * Dune::power(w / h, 3));
   };
 
   std::vector<double> x  = linspace(0.0, dVec.maxCoeff());

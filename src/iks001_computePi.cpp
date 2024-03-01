@@ -19,10 +19,10 @@
 void boundaryUnawareRefinedCircle() {
   std::cout << std::endl << "Comparing the values of Pi with global refinements of unit circle" << std::endl;
 
-  constexpr int gridDim = 2;  // (1)
+  constexpr int gridDim = 2; // (1)
   using Grid            = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
   auto grid             = Dune::GmshReader<Grid>::read("auxiliaryFiles/circleCoarse.msh", false);
-  auto gridView         = grid->leafGridView();  // (2)
+  auto gridView         = grid->leafGridView(); // (2)
 
   // draw(gridView);
 
@@ -37,8 +37,8 @@ void boundaryUnawareRefinedCircle() {
     auto gridViewRefined = grid->leafGridView();
     std::cout << "This gridview contains: ";
     std::cout << gridViewRefined.size(0) << " elements" << std::endl;
-    //    draw(gridViewRefined);
-    for (auto &element : elements(gridViewRefined)) {
+    // draw(gridViewRefined);
+    for (auto& element : elements(gridViewRefined)) {
       area += element.geometry().volume();
     }
     std::cout << std::setprecision(10) << "Area: " << area << " Pi: " << std::numbers::pi << std::endl;
@@ -47,8 +47,8 @@ void boundaryUnawareRefinedCircle() {
   std::vector<double> areas;
   areas.resize(gridView.size(0));
 
-  auto &indexSet = gridView.indexSet();
-  for (auto &ele : elements(gridView))
+  auto& indexSet = gridView.indexSet();
+  for (auto& ele : elements(gridView))
     areas[indexSet.index(ele)] = ele.geometry().volume();
 
   Dune::VTKWriter vtkWriter(gridView);
@@ -57,18 +57,23 @@ void boundaryUnawareRefinedCircle() {
 
   /// Calculate circumference and compare to pi
   double circumference = 0.0;
-  for (auto &element : elements(gridView))
+  for (auto& element : elements(gridView))
     if (element.hasBoundaryIntersections())
-      for (auto &intersection : intersections(gridView, element))
-        if (intersection.boundary()) circumference += intersection.geometry().volume();
+      for (auto& intersection : intersections(gridView, element))
+        if (intersection.boundary())
+          circumference += intersection.geometry().volume();
 
   std::cout << std::setprecision(10) << "Circumference/2: " << circumference / 2 << " Pi: " << std::numbers::pi
             << std::endl;
 }
 
-struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double> {
-  UnitCircleBoundary(const Dune::FieldVector<double, 2> &a, const Dune::FieldVector<double, 2> &b) : corners{{a, b}} {}
-  Dune::FieldVector<double, 2> operator()(const Dune::FieldVector<double, 1> &local) const override {
+struct UnitCircleBoundary : Dune::BoundarySegment<2, 2, double>
+{
+  UnitCircleBoundary(const Dune::FieldVector<double, 2>& a, const Dune::FieldVector<double, 2>& b)
+      : corners{
+            {a, b}
+  } {}
+  Dune::FieldVector<double, 2> operator()(const Dune::FieldVector<double, 1>& local) const override {
     Dune::FieldVector<double, 2> result = {0, 0};
     double omega                        = std::acos(corners[0] * corners[1]);
     return std::sin((1 - local[0]) * omega) / sin(omega) * corners[0] + sin(local[0] * omega) / sin(omega) * corners[1];
@@ -88,7 +93,7 @@ void boundaryAwareRefinedCircle() {
   std::array<FieldVector<double, 2>, 6> corners0;
   Eigen::Rotation2D<double> R;
   R.angle() = 0.0;
-  for (auto &corner : corners0) {
+  for (auto& corner : corners0) {
     Eigen::Vector2d a = R * v;
     corner[0]         = a[0];
     corner[1]         = a[1];
@@ -126,9 +131,10 @@ void boundaryAwareRefinedCircle() {
   for (int i = 0; i < 10; ++i) {
     area = 0.0;
     /// Refine grid entities if they live at the boundary
-    //    grid->globalRefine(1);
-    for (const auto &ele : elements(grid->leafGridView())) {
-      if (ele.hasBoundaryIntersections()) grid->mark(1, ele);
+    // grid->globalRefine(1);
+    for (const auto& ele : elements(grid->leafGridView())) {
+      if (ele.hasBoundaryIntersections())
+        grid->mark(1, ele);
     }
     grid->preAdapt();
     grid->adapt();
@@ -138,7 +144,7 @@ void boundaryAwareRefinedCircle() {
     std::cout << "This gridview contains: ";
     std::cout << gridViewRefined.size(0) << " elements" << std::endl;
 
-    for (auto &element : elements(gridViewRefined))
+    for (auto& element : elements(gridViewRefined))
       area += element.geometry().volume();
 
     std::cout << std::setprecision(10) << "Area: " << area << " Pi: " << std::numbers::pi << std::endl;
@@ -146,16 +152,17 @@ void boundaryAwareRefinedCircle() {
   }
   /// Calculate circumference and compare to pi
   double circumference = 0.0;
-  for (auto &element : elements(grid->leafGridView()))
+  for (auto& element : elements(grid->leafGridView()))
     if (element.hasBoundaryIntersections())
-      for (auto &intersection : intersections(grid->leafGridView(), element))
-        if (intersection.boundary()) circumference += intersection.geometry().volume();
+      for (auto& intersection : intersections(grid->leafGridView(), element))
+        if (intersection.boundary())
+          circumference += intersection.geometry().volume();
 
   std::cout << std::setprecision(10) << "Circumference/2: " << circumference / 2 << " Pi: " << std::numbers::pi
             << std::endl;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
   boundaryUnawareRefinedCircle();
   boundaryAwareRefinedCircle();
