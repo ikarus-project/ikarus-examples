@@ -22,6 +22,8 @@
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/finiteelements/mechanics/enhancedassumedstrains.hh>
 #include <ikarus/finiteelements/mechanics/linearelastic.hh>
+#include <ikarus/finiteelements/mechanics/loads.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/dirichletvalues.hh>
@@ -189,20 +191,10 @@ int main(int argc, char** argv) {
       vtkWriter.write("iks008_cooksMembrane" + std::to_string(ref));
       auto localView = basis.flat().localView();
       auto localw    = localFunction(dispGlobalFunc);
-      double uy_fe   = 0.0;
-      Eigen::Vector2d req_pos;
-      req_pos << 48.0, 60.0;
-      for (auto& ele : elements(gridView)) {
-        localView.bind(ele);
-        localw.bind(ele);
-        const auto geo = localView.element().geometry();
-        for (size_t i = 0; i < 4; ++i) {
-          if (Dune::FloatCmp::eq(geo.corner(i)[0], req_pos[0]) and Dune::FloatCmp::eq(geo.corner(i)[1], req_pos[1])) {
-            const auto local_pos = geo.local(toDune(req_pos));
-            uy_fe                = Dune::toEigen(localw(local_pos)).eval()[1];
-          }
-        }
-      }
+
+      Dune::FieldVector req_pos({48.0, 60.0});
+	  double uy_fe   = dispGlobalFunc(req_pos);
+
       dofsVec.push_back(basis.flat().size());
       dispVec.push_back(uy_fe);
 
