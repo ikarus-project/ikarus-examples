@@ -21,7 +21,7 @@
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
 #include <ikarus/finiteelements/autodifffe.hh>
-#include <ikarus/finiteelements/febase.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
@@ -50,7 +50,7 @@ struct TrussPre
 };
 
 
-template <typename PreFE, typename FE, typename PRE>
+template <typename PreFE, typename FE>
 class Truss
 {
 public:
@@ -66,7 +66,7 @@ public:
   Truss( Pre pre)
       :EA{pre.EA} {}
 
-  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
+  void bind(){}
 
 protected:
   template <typename ScalarType>
