@@ -98,17 +98,15 @@ int main(int argc, char** argv) {
               dirichletFlags[localView.index(localIndex)] = true;
           });
 
-      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(basis)>>> fes;
-
       /// function for volume load- here: returns zero
-      auto volumeLoad = [](auto& globalCoord, auto& lamb) {
+      auto vL = [](auto& globalCoord, auto& lamb) {
         Eigen::Vector2d fext;
         fext.setZero();
         return fext;
       };
 
       /// neumann boundary load in vertical direction
-      auto neumannBoundaryLoad = [&](auto& globalCoord, auto& lamb) {
+      auto neumannBl = [&](auto& globalCoord, auto& lamb) {
         Eigen::Vector2d F = Eigen::Vector2d::Zero();
         F[1]              = lamb / 16.0;
         return F;
@@ -135,10 +133,12 @@ int main(int argc, char** argv) {
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
-      for (auto& element : elements(gridView)) {
-        fes.emplace_back(basis, element, E, nu, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
-        fes.back().setEASType(numberOfEASParameters);
-      }
+    auto preFE = makeFE(basis, skills(linearElastic(reducedMat),eas(numberOfEASParameters), volumeLoad<2>(vL),neumannBoundaryLoad(&neumannBoundary, neumannBl)));
+    std::vector<decltype(preFE())> fes;
+    for (auto&& ge : elements(gridView)) {
+      fes.emplace_back(preFE());
+      fes.back().bind(ge);
+    }
 
       auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
                    durationAssembly.count(), numberOfEASParameters, basis.flat().size());
-      ;
+
       timeVec.push_back(durationAssembly.count());
       const auto& K    = nonLinOp.derivative();
       const auto& Fext = nonLinOp.value();

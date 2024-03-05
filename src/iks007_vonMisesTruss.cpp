@@ -20,7 +20,7 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
-#include <ikarus/finiteelements/autodiff/autodifffe.hh>
+#include <ikarus/finiteelements/autodifffe.hh>
 #include <ikarus/finiteelements/febase.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
@@ -37,22 +37,34 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_>
-class Truss : public FEBase<Basis_>
+
+template <typename PreFE, typename FE>
+class Truss;
+
+struct TrussPre
+{
+  double EA;
+
+  template <typename PreFE, typename FE>
+  using Skill = Truss<PreFE, FE>;
+};
+
+
+template <typename PreFE, typename FE, typename PRE>
+class Truss
 {
 public:
-  using Base              = FEBase<Basis_>;
-  using Traits            = typename Base::Traits;
+  using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
+  using Pre           = TrussPre;
 
-  Truss(const BasisHandler& basisHandler, const typename LocalView::Element& element, double p_EA)
-      : Base(basisHandler, element),
-        EA{p_EA} {}
+  Truss( Pre pre)
+      :EA{pre.EA} {}
 
   inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
 
@@ -96,6 +108,12 @@ private:
   double EA;
 };
 
+auto truss(double EA)
+{
+return TrussPre(EA);
+}
+
+
 int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
   /// Construct grid
@@ -117,9 +135,12 @@ int main(int argc, char** argv) {
 
   /// Create finite elements
   const double EA = 100;
-  std::vector<AutoDiffFE<Truss<decltype(basis)>>> fes;
-  for (auto& ele : elements(gridView))
-    fes.emplace_back(basis, ele, EA);
+  auto preFE = makeFE(basis, skills(truss(EA)));
+  std::vector<decltype(preFE())> fes;
+  for (auto&& ge : elements(gridView)) {
+    fes.emplace_back(preFE());
+    fes.back().bind(ge);
+  }
 
   /// Collect dirichlet nodes
   auto basisP = std::make_shared<const decltype(basis)>(basis);
