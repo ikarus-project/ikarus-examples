@@ -71,7 +71,7 @@ public:
 protected:
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx = std::nullopt) const
       -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(FEParameter::loadfactor);
@@ -136,9 +136,9 @@ int main(int argc, char** argv) {
   /// Create finite elements
   const double EA = 100;
   auto preFE = makeFE(basis, skills(truss(EA)));
-  std::vector<decltype(preFE())> fes;
+  std::vector<decltype(preFE)> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(preFE());
+    fes.emplace_back(preFE);
     fes.back().bind(ge);
   }
 

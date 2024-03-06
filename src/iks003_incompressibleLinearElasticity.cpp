@@ -33,8 +33,21 @@
 
 using namespace Ikarus;
 using namespace Dune::Indices;
-template <typename Basis_>
-struct Solid : public FEBase<Basis_>
+
+template <typename PreFE, typename FE>
+class IncompressibleSolid;
+
+struct IncompressibleSolidPre
+{
+  double emod;
+  double nu;
+
+  template <typename PreFE, typename FE>
+  using Skill = IncompressibleSolidPre<PreFE, FE>;
+};
+
+template <typename PreFE, typename FE>
+struct IncompressibleSolid
 {
 public:
   using Base              = FEBase<Basis_>;
@@ -46,13 +59,12 @@ public:
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
   using GlobalIndex       = typename Traits::GlobalIndex;
-
-  Solid(const BasisHandler& basisHandler, const typename LocalView::Element& element, double emod, double nu)
-      : Base(basisHandler, element),
-        emod_{emod},
-        nu_{nu} {
+  using Pre           = IncompressibleSolidPre;
+  IncompressibleSolid( Pre pre)
+      : emod_{pre.emod},
+        nu_{pre.nu} {
     mu_       = emod_ / (2 * (1 + nu_));
-    lambdaMat = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
+    lambdaMat_ = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
   inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
@@ -60,7 +72,7 @@ public:
 protected:
   template <class ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx = std::nullopt) const
       -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
@@ -133,7 +145,7 @@ private:
   double emod_;
   double nu_;
   double mu_;
-  double lambdaMat;
+  double lambdaMat_;
 };
 
 int main(int argc, char** argv) {
@@ -163,9 +175,12 @@ int main(int argc, char** argv) {
   /// Create finite elements
   const double Emod = 2.1e1;
   const double nu   = 0.5;
-  std::vector<AutoDiffFE<Solid<decltype(basis)>>> fes;
-  for (auto& ele : elements(gridView))
-    fes.emplace_back(basis, ele, Emod, nu);
+  auto preFE = makeFE(basis, skills(IncompressibleSolidPre(Emod,nu)));
+  std::vector<AutoDiffFE<decltype(preFE)>> fes;
+  for (auto&& ge : elements(gridView)) {
+    fes.emplace_back(preFE);
+    fes.back().bind(ge);
+  }
 
   /// Collect dirichlet nodes
   auto basisP = std::make_shared<const decltype(basis)>(basis);

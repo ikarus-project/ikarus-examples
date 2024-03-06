@@ -136,9 +136,9 @@ int main(int argc, char** argv) {
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
     auto preFE = makeFE(basis, skills(linearElastic({E,nu}),eas(numberOfEASParameters), volumeLoad<2>(vL),neumannBoundaryLoad(&neumannBoundary, neumannBl)));
-    std::vector<decltype(preFE())> fes;
+    std::vector<decltype(preFE)> fes;
     for (auto&& ge : elements(gridView)) {
-      fes.emplace_back(preFE());
+      fes.emplace_back(preFE);
       fes.back().bind(ge);
     }
 

@@ -233,9 +233,9 @@ int main(int argc, char** argv) {
     const double thickness = 0.1;
 
   auto preFE = makeFE(basis, skills(klPlate(Emod, nu, thickness)));
-  std::vector<AutoDiffFE<decltype(preFE())>> fes;
+  std::vector<AutoDiffFE<decltype(preFE)>> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(AutoDiffFE(preFE()));
+    fes.emplace_back(AutoDiffFE(preFE));
     fes.back().bind(ge);
   }
 
