@@ -232,12 +232,12 @@ int main(int argc, char** argv) {
     const double nu        = 0.3;
     const double thickness = 0.1;
 
-  auto preFE = makeFE(basis, skills(klPlate(Emod, nu, thickness)));
-  std::vector<AutoDiffFE<decltype(preFE)>> fes;
-  for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(AutoDiffFE(preFE));
-    fes.back().bind(ge);
-  }
+    auto sk = skills(klPlate(Emod, nu, thickness));
+    std::vector<AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
+    for (auto&& ge : elements(gridView)) {
+      fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
+      fes.back().bind(ge);
+    }
 
     /// Create assembler
     auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);

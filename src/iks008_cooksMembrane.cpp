@@ -192,8 +192,8 @@ int main(int argc, char** argv) {
       auto localView = basis.flat().localView();
       auto localw    = localFunction(dispGlobalFunc);
 
-      Dune::FieldVector req_pos({48.0, 60.0});
-	  double uy_fe   = dispGlobalFunc(req_pos);
+      Dune::FieldVector<double,2> req_pos({48.0, 60.0});
+      double uy_fe   = dispGlobalFunc(req_pos);
 
       dofsVec.push_back(basis.flat().size());
       dispVec.push_back(uy_fe);
