@@ -148,8 +148,6 @@ int main(int argc, char** argv) {
   Ikarus::StVenantKirchhoff matSVK(matParameter);
   auto reducedMat = planeStress(matSVK, 1e-8);
 
-
-
   auto vL = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
@@ -162,13 +160,12 @@ int main(int argc, char** argv) {
     fext[1] = lamb / 40;
     return fext;
   };
-
-  auto preFE = makeFE(basis, skills(nonLinearElastic(reducedMat), volumeLoad<2>(vL),neumannBoundaryLoad(&neumannBoundary, neumannBl)));
-    std::vector<decltype(preFE)> fes;
-    for (auto&& ge : elements(gridView)) {
-      fes.emplace_back(preFE);
-      fes.back().bind(ge);
-    }
+  auto sk = skills(nonLinearElastic(reducedMat), volumeLoad<2>(vL), neumannBoundaryLoad(&neumannBoundary, neumannBl));
+  std::vector<decltype(makeFE(basis, sk))> fes;
+  for (auto&& ge : elements(gridView)) {
+    fes.emplace_back(makeFE(basis, sk));
+    fes.back().bind(ge);
+  }
 
   auto basisP = std::make_shared<const decltype(basis)>(basis);
   Ikarus::DirichletValues dirichletValues(basisP->flat());

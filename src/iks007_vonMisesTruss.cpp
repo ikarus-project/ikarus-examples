@@ -49,7 +49,6 @@ struct TrussPre
   using Skill = Truss<PreFE, FE>;
 };
 
-
 template <typename PreFE, typename FE>
 class Truss
 {
@@ -61,18 +60,18 @@ public:
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using Pre           = TrussPre;
+  using Pre               = TrussPre;
 
-  Truss( Pre pre)
-      :EA{pre.EA} {}
+  Truss(Pre pre)
+      : EA{pre.EA} {}
 
-  void bind(){}
+  void bind() {}
 
 protected:
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx = std::nullopt) const
-      -> ScalarType {
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(FEParameter::loadfactor);
     const auto& localView = this->localView();
@@ -108,11 +107,7 @@ private:
   double EA;
 };
 
-auto truss(double EA)
-{
-return TrussPre(EA);
-}
-
+auto truss(double EA) { return TrussPre(EA); }
 
 int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
@@ -135,10 +130,10 @@ int main(int argc, char** argv) {
 
   /// Create finite elements
   const double EA = 100;
-  auto preFE = makeFE(basis, skills(truss(EA)));
-  std::vector<decltype(preFE)> fes;
+  auto sk         = skills(truss(EA));
+  std::vector<decltype(makeFE(basis, sk))> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(preFE);
+    fes.emplace_back(makeFE(basis, sk));
     fes.back().bind(ge);
   }
 

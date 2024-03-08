@@ -59,11 +59,11 @@ public:
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
   using GlobalIndex       = typename Traits::GlobalIndex;
-  using Pre           = IncompressibleSolidPre;
-  IncompressibleSolid( Pre pre)
+  using Pre               = IncompressibleSolidPre;
+  IncompressibleSolid(Pre pre)
       : emod_{pre.emod},
         nu_{pre.nu} {
-    mu_       = emod_ / (2 * (1 + nu_));
+    mu_        = emod_ / (2 * (1 + nu_));
     lambdaMat_ = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
@@ -72,8 +72,8 @@ public:
 protected:
   template <class ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx = std::nullopt) const
-      -> ScalarType {
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto& localView = this->localView();
@@ -175,10 +175,10 @@ int main(int argc, char** argv) {
   /// Create finite elements
   const double Emod = 2.1e1;
   const double nu   = 0.5;
-  auto preFE = makeFE(basis, skills(IncompressibleSolidPre(Emod,nu)));
-  std::vector<AutoDiffFE<decltype(preFE)>> fes;
+  auto sk           = skills(IncompressibleSolidPre(Emod, nu));
+  std::vector<AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(preFE);
+    fes.emplace_back(makeFE(basis, sk));
     fes.back().bind(ge);
   }
 

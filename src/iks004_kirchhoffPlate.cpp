@@ -49,7 +49,6 @@ struct KirchhoffPlatePre
   using Skill = KirchhoffPlate<PreFE, FE>;
 };
 
-
 template <typename PreFE, typename FE>
 class KirchhoffPlate
 {
@@ -61,17 +60,14 @@ public:
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
-  using Pre           = KirchhoffPlatePre;
-
+  using Pre               = KirchhoffPlatePre;
 
   KirchhoffPlate(Pre pre)
       : Emodul{pre.Emodul},
         nu{pre.nu},
-        thickness{pre.thickness} {
-  }
+        thickness{pre.thickness} {}
 
-  void bind(){}
-
+  void bind() {}
 
   static Eigen::Matrix<double, 3, 3> constitutiveMatrix(double Emod, double p_nu, double p_thickness) {
     const double factor = Emod * Dune::power(p_thickness, 3) / (12.0 * (1.0 - p_nu * p_nu));
@@ -87,10 +83,9 @@ public:
 
 protected:
   template <typename ScalarType>
-  auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
-      -> ScalarType {
-    const auto geometry = this->localView().element().geometry();
+  auto calculateScalarImpl(const FERequirementType& par, const std::optional<const Eigen::VectorX<ScalarType>>& dx =
+                                                             std::nullopt) const -> ScalarType {
+    const auto geometry   = this->localView().element().geometry();
     const auto& wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D          = constitutiveMatrix(Emodul, nu, thickness);
@@ -166,17 +161,14 @@ protected:
 
     return energy;
   }
+
 private:
   double Emodul;
   double nu;
   double thickness;
 };
 
-
-auto klPlate(double E,double nu, double thickness)
-{
-return KirchhoffPlatePre(E,nu,thickness);
-}
+auto klPlate(double E, double nu, double thickness) { return KirchhoffPlatePre(E, nu, thickness); }
 
 int main(int argc, char** argv) {
   Ikarus::init(argc, argv);

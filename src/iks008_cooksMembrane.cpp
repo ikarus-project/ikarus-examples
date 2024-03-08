@@ -20,10 +20,10 @@
 #include <Eigen/Eigenvalues>
 
 #include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/mechanics/enhancedassumedstrains.hh>
 #include <ikarus/finiteelements/mechanics/linearelastic.hh>
 #include <ikarus/finiteelements/mechanics/loads.hh>
-#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/dirichletvalues.hh>
@@ -134,13 +134,13 @@ int main(int argc, char** argv) {
       }
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
-
-    auto preFE = makeFE(basis, skills(linearElastic({E,nu}),eas(numberOfEASParameters), volumeLoad<2>(vL),neumannBoundaryLoad(&neumannBoundary, neumannBl)));
-    std::vector<decltype(preFE)> fes;
-    for (auto&& ge : elements(gridView)) {
-      fes.emplace_back(preFE);
-      fes.back().bind(ge);
-    }
+      auto sk = skills(linearElastic({E, nu}), eas(numberOfEASParameters), volumeLoad<2>(vL),
+                       neumannBoundaryLoad(&neumannBoundary, neumannBl));
+      std::vector<decltype(makeFE(basis, sk))> fes;
+      for (auto&& ge : elements(gridView)) {
+        fes.emplace_back(makeFE(basis, sk));
+        fes.back().bind(ge);
+      }
 
       auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
 
@@ -192,8 +192,8 @@ int main(int argc, char** argv) {
       auto localView = basis.flat().localView();
       auto localw    = localFunction(dispGlobalFunc);
 
-      Dune::FieldVector<double,2> req_pos({48.0, 60.0});
-      double uy_fe   = dispGlobalFunc(req_pos);
+      Dune::FieldVector<double, 2> req_pos({48.0, 60.0});
+      double uy_fe = dispGlobalFunc(req_pos);
 
       dofsVec.push_back(basis.flat().size());
       dispVec.push_back(uy_fe);
