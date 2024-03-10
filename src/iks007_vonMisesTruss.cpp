@@ -134,9 +134,10 @@ int main(int argc, char** argv) {
   /// Create finite elements
   const double EA = 100;
   auto sk         = skills(truss(EA));
-  std::vector<Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
+  using AutoDiffFE= Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+  std::vector<AutoDiffFE> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(Ikarus::AutoDiffFE(makeFE(basis, sk)));
+    fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
     fes.back().bind(ge);
   }
 
