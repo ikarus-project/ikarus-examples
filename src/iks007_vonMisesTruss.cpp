@@ -77,7 +77,7 @@ protected:
                                std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(FEParameter::loadfactor);
-    const auto& localView = this->localView();
+    const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     auto& ele             = localView.element();
     const auto X1         = Dune::toEigen(ele.geometry().corner(0));
@@ -107,6 +107,9 @@ protected:
   }
 
 private:
+  //> CRTP
+  const auto& underlying() const { return static_cast<const FE&>(*this); }
+  auto& underlying() { return static_cast<FE&>(*this); }
   double EA;
 };
 
@@ -132,9 +135,9 @@ int main(int argc, char** argv) {
   auto basis = Ikarus::makeBasis(gridView, power<2>(lagrange<1>()));
 
   /// Create finite elements
-  const double EA = 100;
-  auto sk         = skills(truss(EA));
-  using AutoDiffFE= Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+  const double EA  = 100;
+  auto sk          = skills(truss(EA));
+  using AutoDiffFE = Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
   std::vector<AutoDiffFE> fes;
   for (auto&& ge : elements(gridView)) {
     fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));

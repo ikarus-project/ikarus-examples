@@ -47,11 +47,10 @@ struct IncompressibleSolidPre
 };
 
 template <typename PreFE, typename FE>
-struct IncompressibleSolid
+class IncompressibleSolid
 {
 public:
-  using Base              = FEBase<Basis_>;
-  using Traits            = typename Base::Traits;
+  using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
@@ -81,7 +80,7 @@ protected:
                                std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
-    const auto& localView = this->localView();
+    const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     Eigen::VectorX<ScalarType> localDisp(localView.size());
     localDisp.setZero();
@@ -139,14 +138,17 @@ protected:
       fext[1] = lambda;
       fext[0] = 0 * lambda;
 
-      energy += (0.5 * (2 * mu_ * symgradu.squaredNorm() - 1 / lambdaMat * Dune::power(pressure, 2)) + pressure * divU -
-                 x.dot(fext)) *
+      energy += (0.5 * (2 * mu_ * symgradu.squaredNorm() - 1 / lambdaMat_ * Dune::power(pressure, 2)) +
+                 pressure * divU - x.dot(fext)) *
                 geo.integrationElement(gp.position()) * gp.weight(); // plane strain for 2D
     }
     return energy;
   }
 
 private:
+  //> CRTP
+  const auto& underlying() const { return static_cast<const FE&>(*this); }
+  auto& underlying() { return static_cast<FE&>(*this); }
   double emod_;
   double nu_;
   double mu_;
@@ -181,7 +183,7 @@ int main(int argc, char** argv) {
   const double Emod = 2.1e1;
   const double nu   = 0.5;
   auto sk           = skills(IncompressibleSolidPre(Emod, nu));
-  using AutoDiffFE= Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+  using AutoDiffFE  = Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
 
   std::vector<AutoDiffFE> fes;
   for (auto&& ge : elements(gridView)) {
