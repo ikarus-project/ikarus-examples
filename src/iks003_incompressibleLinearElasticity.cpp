@@ -70,6 +70,11 @@ public:
   inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
 
 protected:
+  template <template <typename, int, int> class RT>
+  requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
+  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+                       Dune::PriorityTag<0>) const {}
+
   template <class ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =

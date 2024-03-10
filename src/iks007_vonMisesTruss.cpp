@@ -65,9 +65,12 @@ public:
   Truss(Pre pre)
       : EA{pre.EA} {}
 
-  void bind() {}
-
 protected:
+  template <template <typename, int, int> class RT>
+  requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
+  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+                       Dune::PriorityTag<0>) const {}
+
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
