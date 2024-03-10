@@ -181,9 +181,9 @@ int main(int argc, char** argv) {
   const double Emod = 2.1e1;
   const double nu   = 0.5;
   auto sk           = skills(IncompressibleSolidPre(Emod, nu));
-  std::vector<AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
+  std::vector<Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(Autodiff(makeFE(basis, sk)));
+    fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
     fes.back().bind(ge);
   }
 
