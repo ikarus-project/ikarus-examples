@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
   auto sk           = skills(IncompressibleSolidPre(Emod, nu));
   std::vector<AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
   for (auto&& ge : elements(gridView)) {
-    fes.emplace_back(makeFE(basis, sk));
+    fes.emplace_back(Autodiff(makeFE(basis, sk)));
     fes.back().bind(ge);
   }
 
