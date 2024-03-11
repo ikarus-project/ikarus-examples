@@ -91,12 +91,12 @@ protected:
   auto calculateScalarImpl(const FERequirementType& par,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
-    const auto geometry   = this->localView().element().geometry();
+    const auto geometry   = underlying().localView().element().geometry();
     const auto& wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D          = constitutiveMatrix(Emodul, nu, thickness);
     ScalarType energy     = 0.0;
-    const auto& localView = this->localView();
+    const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     auto& ele             = localView.element();
     auto& fe              = tree.finiteElement();
@@ -169,6 +169,9 @@ protected:
   }
 
 private:
+  //> CRTP
+  const auto& underlying() const { return static_cast<const FE&>(*this); }
+  auto& underlying() { return static_cast<FE&>(*this); }
   double Emodul;
   double nu;
   double thickness;
