@@ -240,8 +240,8 @@ int main(int argc, char** argv) {
   // Postprocessing
   auto displacementFunction =
       Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
-  auto stressFunction   = Ikarus::makeResultFunction<ResultType::PK2Stress>(&fes, req);
-  auto vonMisesFunction = Ikarus::makeResultFunction<ResultType::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
+  auto stressFunction   = Ikarus::makeResultFunction<ResultTypes::PK2Stress>(&fes, req);
+  auto vonMisesFunction = Ikarus::makeResultFunction<ResultTypes::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
 
   Dune::VTKWriter resultWriter(gridView);
   resultWriter.addVertexData(displacementFunction,
