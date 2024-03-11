@@ -234,7 +234,8 @@ int main(int argc, char** argv) {
     const double thickness = 0.1;
 
     auto sk = skills(klPlate(Emod, nu, thickness));
-    std::vector<AutoDiffFE<decltype(makeFE(basis, sk))>> fes;
+  using AutoDiffFE  = Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+    std::vector<AutoDiffFE> fes;
     for (auto&& ge : elements(gridView)) {
       fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
       fes.back().bind(ge);
