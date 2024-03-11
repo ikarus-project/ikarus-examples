@@ -24,6 +24,7 @@
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/finiteelements/autodiff/autodifffe.hh>
 #include <ikarus/finiteelements/febase.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
