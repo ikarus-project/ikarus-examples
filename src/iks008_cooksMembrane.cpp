@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
         const auto geo = localView.element().geometry();
         for (size_t i = 0; i < 4; ++i) {
           if (Dune::FloatCmp::eq(geo.corner(i)[0], req_pos[0]) and Dune::FloatCmp::eq(geo.corner(i)[1], req_pos[1])) {
-            const auto local_pos = geo.local(toDune(req_pos));
+            const auto local_pos = geo.local( Dune::toDune(req_pos));
             uy_fe                = Dune::toEigen(localw(local_pos)).eval()[1];
           }
         }
