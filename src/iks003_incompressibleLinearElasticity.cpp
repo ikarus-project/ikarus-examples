@@ -44,7 +44,7 @@ struct IncompressibleSolidPre
   double nu;
 
   template <typename PreFE, typename FE>
-  using Skill = IncompressibleSolidPre<PreFE, FE>;
+  using Skill = IncompressibleSolid<PreFE, FE>;
 };
 
 template <typename PreFE, typename FE>
