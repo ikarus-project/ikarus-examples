@@ -88,7 +88,8 @@ protected:
     if (dx) {
       for (int i = 0; i < 2; ++i)
         for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-          u.col(i)(k2) = dx.value()[Traits::worlddim * i + k2] + d[localView.index(tree.child(k2).localIndex(i))[0]];
+          u.col(i)(k2) =
+              dx.value().get()[Traits::worlddim * i + k2] + d[localView.index(tree.child(k2).localIndex(i))[0]];
     } else {
       for (int i = 0; i < 2; ++i)
         for (int k2 = 0; k2 < Traits::worlddim; ++k2)

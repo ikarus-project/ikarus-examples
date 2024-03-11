@@ -97,9 +97,10 @@ protected:
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
           disp.col(i)(k2) =
-              dx.value()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
+              dx.value().get()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
-        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
+        pN[i] =
+            dx.value().get()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
