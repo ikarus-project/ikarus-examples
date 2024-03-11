@@ -82,9 +82,15 @@ public:
   }
 
 protected:
+  template <template <typename, int, int> class RT>
+  requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
+  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+                       Dune::PriorityTag<0>) const {}
+
   template <typename ScalarType>
-  auto calculateScalarImpl(const FERequirementType& par, const std::optional<const Eigen::VectorX<ScalarType>>& dx =
-                                                             std::nullopt) const -> ScalarType {
+  auto calculateScalarImpl(const FERequirementType& par,
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
     const auto geometry   = this->localView().element().geometry();
     const auto& wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
@@ -102,7 +108,7 @@ protected:
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     if (dx) {
       for (auto i = 0U; i < fe.size(); ++i)
-        wNodal(i) = dx.value()[i] + wGlobal[localView.index(tree.localIndex(i))[0]];
+        wNodal(i) = dx.value().get()[i] + wGlobal[localView.index(tree.localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < fe.size(); ++i)
         wNodal(i) = wGlobal[localView.index(tree.localIndex(i))[0]];
