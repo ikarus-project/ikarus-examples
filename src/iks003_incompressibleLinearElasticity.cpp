@@ -22,8 +22,9 @@
 #include <autodiff/forward/dual/dual.hpp>
 
 #include <ikarus/assembler/simpleassemblers.hh>
-#include <ikarus/finiteelements/autodiff/autodifffe.hh>
+#include <ikarus/finiteelements/autodifffe.hh>
 #include <ikarus/finiteelements/febase.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -33,12 +34,24 @@
 
 using namespace Ikarus;
 using namespace Dune::Indices;
-template <typename Basis_>
-struct Solid : public FEBase<Basis_>
+
+template <typename PreFE, typename FE>
+class IncompressibleSolid;
+
+struct IncompressibleSolidPre
+{
+  double emod;
+  double nu;
+
+  template <typename PreFE, typename FE>
+  using Skill = IncompressibleSolid<PreFE, FE>;
+};
+
+template <typename PreFE, typename FE>
+class IncompressibleSolid
 {
 public:
-  using Base              = FEBase<Basis_>;
-  using Traits            = typename Base::Traits;
+  using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
@@ -46,25 +59,29 @@ public:
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
   using GlobalIndex       = typename Traits::GlobalIndex;
-
-  Solid(const BasisHandler& basisHandler, const typename LocalView::Element& element, double emod, double nu)
-      : Base(basisHandler, element),
-        emod_{emod},
-        nu_{nu} {
-    mu_       = emod_ / (2 * (1 + nu_));
-    lambdaMat = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
+  using Pre               = IncompressibleSolidPre;
+  IncompressibleSolid(Pre pre)
+      : emod_{pre.emod},
+        nu_{pre.nu} {
+    mu_        = emod_ / (2 * (1 + nu_));
+    lambdaMat_ = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
   inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
 
 protected:
+  template <template <typename, int, int> class RT>
+  requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
+  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+                       Dune::PriorityTag<0>) const {}
+
   template <class ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
-      -> ScalarType {
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
-    const auto& localView = this->localView();
+    const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     Eigen::VectorX<ScalarType> localDisp(localView.size());
     localDisp.setZero();
@@ -81,9 +98,10 @@ protected:
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
           disp.col(i)(k2) =
-              dx.value()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
+              dx.value().get()[i * Traits::mydim + k2] + d[localView.index(tree.child(_0, k2).localIndex(i))[0]];
       for (auto i = 0U; i < fePressure.size(); ++i)
-        pN[i] = dx.value()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
+        pN[i] =
+            dx.value().get()[Traits::mydim * feDisp.size() + i] + d[localView.index(tree.child(_1).localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < feDisp.size(); ++i)
         for (auto k2 = 0U; k2 < Traits::mydim; ++k2)
@@ -122,18 +140,21 @@ protected:
       fext[1] = lambda;
       fext[0] = 0 * lambda;
 
-      energy += (0.5 * (2 * mu_ * symgradu.squaredNorm() - 1 / lambdaMat * Dune::power(pressure, 2)) + pressure * divU -
-                 x.dot(fext)) *
+      energy += (0.5 * (2 * mu_ * symgradu.squaredNorm() - 1 / lambdaMat_ * Dune::power(pressure, 2)) +
+                 pressure * divU - x.dot(fext)) *
                 geo.integrationElement(gp.position()) * gp.weight(); // plane strain for 2D
     }
     return energy;
   }
 
 private:
+  //> CRTP
+  const auto& underlying() const { return static_cast<const FE&>(*this); }
+  auto& underlying() { return static_cast<FE&>(*this); }
   double emod_;
   double nu_;
   double mu_;
-  double lambdaMat;
+  double lambdaMat_;
 };
 
 int main(int argc, char** argv) {
@@ -163,9 +184,14 @@ int main(int argc, char** argv) {
   /// Create finite elements
   const double Emod = 2.1e1;
   const double nu   = 0.5;
-  std::vector<AutoDiffFE<Solid<decltype(basis)>>> fes;
-  for (auto& ele : elements(gridView))
-    fes.emplace_back(basis, ele, Emod, nu);
+  auto sk           = skills(IncompressibleSolidPre(Emod, nu));
+  using AutoDiffFE  = Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+
+  std::vector<AutoDiffFE> fes;
+  for (auto&& ge : elements(gridView)) {
+    fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
+    fes.back().bind(ge);
+  }
 
   /// Collect dirichlet nodes
   auto basisP = std::make_shared<const decltype(basis)>(basis);

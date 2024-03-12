@@ -20,8 +20,8 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
-#include <ikarus/finiteelements/autodiff/autodifffe.hh>
-#include <ikarus/finiteelements/febase.hh>
+#include <ikarus/finiteelements/autodifffe.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
@@ -37,33 +37,47 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_>
-class Truss : public FEBase<Basis_>
+
+template <typename PreFE, typename FE>
+class Truss;
+
+struct TrussPre
+{
+  double EA;
+
+  template <typename PreFE, typename FE>
+  using Skill = Truss<PreFE, FE>;
+};
+
+template <typename PreFE, typename FE>
+class Truss
 {
 public:
-  using Base              = FEBase<Basis_>;
-  using Traits            = typename Base::Traits;
+  using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
+  using Pre               = TrussPre;
 
-  Truss(const BasisHandler& basisHandler, const typename LocalView::Element& element, double p_EA)
-      : Base(basisHandler, element),
-        EA{p_EA} {}
-
-  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
+  Truss(Pre pre)
+      : EA{pre.EA} {}
 
 protected:
+  template <template <typename, int, int> class RT>
+  requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
+  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+                       Dune::PriorityTag<0>) const {}
+
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
-      -> ScalarType {
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(FEParameter::loadfactor);
-    const auto& localView = this->localView();
+    const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     auto& ele             = localView.element();
     const auto X1         = Dune::toEigen(ele.geometry().corner(0));
@@ -74,7 +88,8 @@ protected:
     if (dx) {
       for (int i = 0; i < 2; ++i)
         for (int k2 = 0; k2 < Traits::worlddim; ++k2)
-          u.col(i)(k2) = dx.value()[Traits::worlddim * i + k2] + d[localView.index(tree.child(k2).localIndex(i))[0]];
+          u.col(i)(k2) =
+              dx.value().get()[Traits::worlddim * i + k2] + d[localView.index(tree.child(k2).localIndex(i))[0]];
     } else {
       for (int i = 0; i < 2; ++i)
         for (int k2 = 0; k2 < Traits::worlddim; ++k2)
@@ -93,8 +108,13 @@ protected:
   }
 
 private:
+  //> CRTP
+  const auto& underlying() const { return static_cast<const FE&>(*this); }
+  auto& underlying() { return static_cast<FE&>(*this); }
   double EA;
 };
+
+auto truss(double EA) { return TrussPre(EA); }
 
 int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
@@ -116,10 +136,14 @@ int main(int argc, char** argv) {
   auto basis = Ikarus::makeBasis(gridView, power<2>(lagrange<1>()));
 
   /// Create finite elements
-  const double EA = 100;
-  std::vector<AutoDiffFE<Truss<decltype(basis)>>> fes;
-  for (auto& ele : elements(gridView))
-    fes.emplace_back(basis, ele, EA);
+  const double EA  = 100;
+  auto sk          = skills(truss(EA));
+  using AutoDiffFE = Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+  std::vector<AutoDiffFE> fes;
+  for (auto&& ge : elements(gridView)) {
+    fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
+    fes.back().bind(ge);
+  }
 
   /// Collect dirichlet nodes
   auto basisP = std::make_shared<const decltype(basis)>(basis);

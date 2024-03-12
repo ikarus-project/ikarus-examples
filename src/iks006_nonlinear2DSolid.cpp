@@ -21,6 +21,7 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/ferequirements.hh>
 #include <ikarus/finiteelements/mechanics/materials/svk.hh>
 #include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
@@ -147,23 +148,25 @@ int main(int argc, char** argv) {
 
   Ikarus::StVenantKirchhoff matSVK(matParameter);
   auto reducedMat = planeStress(matSVK, 1e-8);
-  std::vector<Ikarus::NonLinearElastic<decltype(basis), decltype(reducedMat)>> fes;
 
-  auto volumeLoad = [](auto& globalCoord, auto& lamb) {
+  auto vL = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
     return fext;
   };
 
-  auto neumannBoundaryLoad = [](auto& globalCoord, auto& lamb) {
+  auto neumannBl = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
     fext.setZero();
     fext[1] = lamb / 40;
     return fext;
   };
-
-  for (auto& element : elements(gridView))
-    fes.emplace_back(basis, element, reducedMat, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
+  auto sk = skills(nonLinearElastic(reducedMat), volumeLoad<2>(vL), neumannBoundaryLoad(&neumannBoundary, neumannBl));
+  std::vector<decltype(makeFE(basis, sk))> fes;
+  for (auto&& ge : elements(gridView)) {
+    fes.emplace_back(makeFE(basis, sk));
+    fes.back().bind(ge);
+  }
 
   auto basisP = std::make_shared<const decltype(basis)>(basis);
   Ikarus::DirichletValues dirichletValues(basisP->flat());
@@ -237,8 +240,8 @@ int main(int argc, char** argv) {
   // Postprocessing
   auto displacementFunction =
       Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
-  auto stressFunction   = Ikarus::makeResultFunction<ResultType::PK2Stress>(&fes, req);
-  auto vonMisesFunction = Ikarus::makeResultFunction<ResultType::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
+  auto stressFunction   = Ikarus::makeResultFunction<ResultTypes::PK2Stress>(&fes, req);
+  auto vonMisesFunction = Ikarus::makeResultFunction<ResultTypes::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
 
   Dune::VTKWriter resultWriter(gridView);
   resultWriter.addVertexData(displacementFunction,

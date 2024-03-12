@@ -20,8 +20,10 @@
 #include <Eigen/Eigenvalues>
 
 #include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/mechanics/enhancedassumedstrains.hh>
 #include <ikarus/finiteelements/mechanics/linearelastic.hh>
+#include <ikarus/finiteelements/mechanics/loads.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/dirichletvalues.hh>
@@ -98,17 +100,15 @@ int main(int argc, char** argv) {
               dirichletFlags[localView.index(localIndex)] = true;
           });
 
-      std::vector<Ikarus::EnhancedAssumedStrains<Ikarus::LinearElastic<decltype(basis)>>> fes;
-
       /// function for volume load- here: returns zero
-      auto volumeLoad = [](auto& globalCoord, auto& lamb) {
+      auto vL = [](auto& globalCoord, auto& lamb) {
         Eigen::Vector2d fext;
         fext.setZero();
         return fext;
       };
 
       /// neumann boundary load in vertical direction
-      auto neumannBoundaryLoad = [&](auto& globalCoord, auto& lamb) {
+      auto neumannBl = [&](auto& globalCoord, auto& lamb) {
         Eigen::Vector2d F = Eigen::Vector2d::Zero();
         F[1]              = lamb / 16.0;
         return F;
@@ -134,10 +134,12 @@ int main(int argc, char** argv) {
       }
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
-
-      for (auto& element : elements(gridView)) {
-        fes.emplace_back(basis, element, E, nu, volumeLoad, &neumannBoundary, neumannBoundaryLoad);
-        fes.back().setEASType(numberOfEASParameters);
+      auto sk = skills(linearElastic({E, nu}), eas(numberOfEASParameters), volumeLoad<2>(vL),
+                       neumannBoundaryLoad(&neumannBoundary, neumannBl));
+      std::vector<decltype(makeFE(basis, sk))> fes;
+      for (auto&& ge : elements(gridView)) {
+        fes.emplace_back(makeFE(basis, sk));
+        fes.back().bind(ge);
       }
 
       auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
@@ -164,7 +166,7 @@ int main(int argc, char** argv) {
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
                    durationAssembly.count(), numberOfEASParameters, basis.flat().size());
-      ;
+
       timeVec.push_back(durationAssembly.count());
       const auto& K    = nonLinOp.derivative();
       const auto& Fext = nonLinOp.value();
@@ -189,7 +191,8 @@ int main(int argc, char** argv) {
       vtkWriter.write("iks008_cooksMembrane" + std::to_string(ref));
       auto localView = basis.flat().localView();
       auto localw    = localFunction(dispGlobalFunc);
-      double uy_fe   = 0.0;
+
+      double uy_fe = 0.0;
       Eigen::Vector2d req_pos;
       req_pos << 48.0, 60.0;
       for (auto& ele : elements(gridView)) {
@@ -198,11 +201,12 @@ int main(int argc, char** argv) {
         const auto geo = localView.element().geometry();
         for (size_t i = 0; i < 4; ++i) {
           if (Dune::FloatCmp::eq(geo.corner(i)[0], req_pos[0]) and Dune::FloatCmp::eq(geo.corner(i)[1], req_pos[1])) {
-            const auto local_pos = geo.local(toDune(req_pos));
+            const auto local_pos = geo.local(Dune::toDune(req_pos));
             uy_fe                = Dune::toEigen(localw(local_pos)).eval()[1];
           }
         }
       }
+
       dofsVec.push_back(basis.flat().size());
       dispVec.push_back(uy_fe);
 

@@ -20,8 +20,8 @@
 #include <Eigen/Dense>
 
 #include <ikarus/assembler/simpleassemblers.hh>
-#include <ikarus/finiteelements/autodiff/autodifffe.hh>
-#include <ikarus/finiteelements/febase.hh>
+#include <ikarus/finiteelements/autodifffe.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -35,27 +35,39 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
-template <typename Basis_>
-class KirchhoffPlate : public FEBase<Basis_>
+
+template <typename PreFE, typename FE>
+class KirchhoffPlate;
+
+struct KirchhoffPlatePre
+{
+  double Emodul;
+  double nu;
+  double thickness;
+
+  template <typename PreFE, typename FE>
+  using Skill = KirchhoffPlate<PreFE, FE>;
+};
+
+template <typename PreFE, typename FE>
+class KirchhoffPlate
 {
 public:
-  using Base              = FEBase<Basis_>;
-  using Traits            = typename Base::Traits;
+  using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
   using FERequirementType = typename Traits::FERequirementType;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
+  using Pre               = KirchhoffPlatePre;
 
-  KirchhoffPlate(const BasisHandler& basisHandler, const typename LocalView::Element& element, double p_Emodul,
-                 double p_nu, double p_thickness)
-      : Base(basisHandler, element),
-        Emodul{p_Emodul},
-        nu{p_nu},
-        thickness{p_thickness} {
-    geometry_.emplace(this->localView().element().geometry());
-  }
+  KirchhoffPlate(Pre pre)
+      : Emodul{pre.Emodul},
+        nu{pre.nu},
+        thickness{pre.thickness} {}
+
+  void bind() {}
 
   static Eigen::Matrix<double, 3, 3> constitutiveMatrix(double Emod, double p_nu, double p_thickness) {
     const double factor = Emod * Dune::power(p_thickness, 3) / (12.0 * (1.0 - p_nu * p_nu));
@@ -69,18 +81,22 @@ public:
     return D;
   }
 
-  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
-
 protected:
+  template <template <typename, int, int> class RT>
+  requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
+  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+                       Dune::PriorityTag<0>) const {}
+
   template <typename ScalarType>
   auto calculateScalarImpl(const FERequirementType& par,
-                           const std::optional<const Eigen::VectorX<ScalarType>>& dx = std::nullopt) const
-      -> ScalarType {
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
+    const auto geometry   = underlying().localView().element().geometry();
     const auto& wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto D          = constitutiveMatrix(Emodul, nu, thickness);
     ScalarType energy     = 0.0;
-    const auto& localView = this->localView();
+    const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     auto& ele             = localView.element();
     auto& fe              = tree.finiteElement();
@@ -92,7 +108,7 @@ protected:
     localBasis.bind(rule, Dune::bindDerivatives(0, 2));
     if (dx) {
       for (auto i = 0U; i < fe.size(); ++i)
-        wNodal(i) = dx.value()[i] + wGlobal[localView.index(tree.localIndex(i))[0]];
+        wNodal(i) = dx.value().get()[i] + wGlobal[localView.index(tree.localIndex(i))[0]];
     } else {
       for (auto i = 0U; i < fe.size(); ++i)
         wNodal(i) = wGlobal[localView.index(tree.localIndex(i))[0]];
@@ -106,7 +122,7 @@ protected:
       auto& ddN_etaeta = ddN.col(1);
       auto& ddN_xieta  = ddN.col(2);
 
-      const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gp.position())).transpose().eval();
+      const auto Jinv = Dune::toEigen(geometry.jacobianInverseTransposed(gp.position())).transpose().eval();
 
       Eigen::VectorXd ddN_xx(fe.size());
       Eigen::VectorXd ddN_yy(fe.size());
@@ -122,7 +138,7 @@ protected:
       kappa << ddN_xx.dot(wNodal), ddN_yy.dot(wNodal), 2 * ddN_xy.dot(wNodal);
       ScalarType w = N.dot(wNodal);
 
-      energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry_->integrationElement(gp.position()) * gp.weight();
+      energy += (0.5 * kappa.dot(D * kappa) - w * lambda) * geometry.integrationElement(gp.position()) * gp.weight();
     }
 
     /// Clamp boundary using penalty method
@@ -137,7 +153,7 @@ protected:
             localBasis.evaluateJacobian(gpInElement, dN_xi_eta);
             Eigen::VectorXd dN_x(fe.size());
             Eigen::VectorXd dN_y(fe.size());
-            const auto Jinv = Dune::toEigen(geometry_->jacobianInverseTransposed(gpInElement)).transpose().eval();
+            const auto Jinv = Dune::toEigen(geometry.jacobianInverseTransposed(gpInElement)).transpose().eval();
             for (auto i = 0U; i < fe.size(); ++i) {
               dN_x[i] = dN_xi_eta(i, 0) * Jinv(0, 0);
               dN_y[i] = dN_xi_eta(i, 1) * Jinv(1, 1);
@@ -153,14 +169,15 @@ protected:
   }
 
 private:
-  /// Dune::Geometry<...> is not copy assignable, see https://gitlab.dune-project.org/core/dune-grid/-/issues/140,
-  /// Thus, we wrap it inside a std::optional
-  std::optional<typename LocalView::Element::Geometry> geometry_;
-
+  //> CRTP
+  const auto& underlying() const { return static_cast<const FE&>(*this); }
+  auto& underlying() { return static_cast<FE&>(*this); }
   double Emodul;
   double nu;
   double thickness;
 };
+
+auto klPlate(double E, double nu, double thickness) { return KirchhoffPlatePre(E, nu, thickness); }
 
 int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
@@ -215,9 +232,14 @@ int main(int argc, char** argv) {
     const double Emod      = 2.1e8;
     const double nu        = 0.3;
     const double thickness = 0.1;
-    std::vector<AutoDiffFE<KirchhoffPlate<decltype(basis)>>> fes;
-    for (auto& ele : elements(gridView))
-      fes.emplace_back(basis, ele, Emod, nu, thickness);
+
+    auto sk          = skills(klPlate(Emod, nu, thickness));
+    using AutoDiffFE = Ikarus::AutoDiffFE<decltype(makeFE(basis, sk))>;
+    std::vector<AutoDiffFE> fes;
+    for (auto&& ge : elements(gridView)) {
+      fes.emplace_back(AutoDiffFE(makeFE(basis, sk)));
+      fes.back().bind(ge);
+    }
 
     /// Create assembler
     auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
