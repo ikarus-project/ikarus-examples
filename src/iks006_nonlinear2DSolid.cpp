@@ -21,11 +21,11 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
+#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/finiteelements/ferequirements.hh>
 #include <ikarus/finiteelements/mechanics/materials/svk.hh>
 #include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
 #include <ikarus/finiteelements/mechanics/nonlinearelastic.hh>
-#include <ikarus/finiteelements/fefactory.hh>
 #include <ikarus/io/resultevaluators.hh>
 #include <ikarus/io/resultfunction.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
