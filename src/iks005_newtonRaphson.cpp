@@ -5,7 +5,7 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
-#include <ikarus/solver/nonlinearsolver/solverinfos.hh>
+#include <ikarus/solver/nonlinearsolver/solverstate.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
@@ -47,10 +47,12 @@ void newtonRaphsonVeryBasicExample() {
 }
 
 class OurFirstObserver
-    : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages, Ikarus::NonLinearSolverLoggingInformation> {
- public:
-  void updateImpl(Ikarus::NonLinearSolverMessages message, const Ikarus::NonLinearSolverLoggingInformation &) override {
-    if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED) std::cout << "Iteration started.\n";
+    : public Ikarus::IObserver<Ikarus::IObservable<Ikarus::NonLinearSolverMessages, Ikarus::NonLinearSolverState>>
+{
+public:
+  void updateImpl(Ikarus::NonLinearSolverMessages message, const Ikarus::NonLinearSolverState&) override {
+    if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED)
+      std::cout << "Iteration started.\n";
   }
 };
 
