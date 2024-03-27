@@ -5,6 +5,7 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
+#include <ikarus/solver/nonlinearsolver/solverstate.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
@@ -45,10 +46,11 @@ void newtonRaphsonVeryBasicExample() {
   std::cout << "expected solution: " << xExpected << "\n";
 }
 
-class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages>
+class OurFirstObserver
+    : public Ikarus::IObserver<Ikarus::IObservable<Ikarus::NonLinearSolverMessages, Ikarus::NonLinearSolverState>>
 {
 public:
-  void updateImpl(Ikarus::NonLinearSolverMessages message) override {
+  void updateImpl(Ikarus::NonLinearSolverMessages message, const Ikarus::NonLinearSolverState&) override {
     if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED)
       std::cout << "Iteration started.\n";
   }
@@ -71,10 +73,6 @@ void newtonRaphsonBasicExampleWithLogger() {
   // create observer and subscribe to Newton-Rhapson
   auto ourSimpleObserver = std::make_shared<OurFirstObserver>();
   nr.subscribe(Ikarus::NonLinearSolverMessages::ITERATION_STARTED, ourSimpleObserver);
-  // nr.subscribeAll(ourSimpleObserver);
-  // auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
-  // nr.subscribe(Ikarus::NonLinearSolverMessages::FINISHED_SUCESSFULLY,
-  // nonLinearSolverObserver); nr.subscribeAll(nonLinearSolverObserver);
 
   const auto solverInfo = nr.solve(x);
   if (solverInfo.success)

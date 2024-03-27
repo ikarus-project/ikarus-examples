@@ -19,6 +19,7 @@
 #include <autodiff/forward/dual/dual.hpp>
 
 #include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/controlroutines/controlstate.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
 #include <ikarus/finiteelements/autodifffe.hh>
 #include <ikarus/finiteelements/fefactory.hh>
@@ -192,7 +193,7 @@ int main(int argc, char** argv) {
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
   /// Create Observer which executes when control routines messages
   /// SOLUTION_CHANGED
-  auto lvkObserver = std::make_shared<Ikarus::GenericObserver<Ikarus::ControlMessages>>(
+  auto lvkObserver = std::make_shared<Ikarus::GenericObserver<Ikarus::ControlMessages, Ikarus::ControlState>>(
       Ikarus::ControlMessages::SOLUTION_CHANGED, [&](int step) {
         lambdaAndDisp(0, step) = lambda;
         lambdaAndDisp(1, step) = d[2];
