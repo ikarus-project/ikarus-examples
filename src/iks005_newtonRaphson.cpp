@@ -73,10 +73,6 @@ void newtonRaphsonBasicExampleWithLogger() {
   // create observer and subscribe to Newton-Rhapson
   auto ourSimpleObserver = std::make_shared<OurFirstObserver>();
   nr.subscribe(Ikarus::NonLinearSolverMessages::ITERATION_STARTED, ourSimpleObserver);
-  // nr.subscribeAll(ourSimpleObserver);
-  // auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
-  // nr.subscribe(Ikarus::NonLinearSolverMessages::FINISHED_SUCESSFULLY,
-  // nonLinearSolverObserver); nr.subscribeAll(nonLinearSolverObserver);
 
   const auto solverInfo = nr.solve(x);
   if (solverInfo.success)
