@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 #if solverType == 1
   auto nr = Ikarus::makeTrustRegion(nonLinOp);
   nr->setup({.verbosity = 1,
-             .maxiter   = 30,
+             .maxIter   = 30,
              .grad_tol  = 1e-8,
              .corr_tol  = 1e-8,
              .useRand   = false,
