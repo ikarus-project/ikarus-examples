@@ -37,11 +37,11 @@ void newtonRaphsonVeryBasicExample() {
   /// Implementation with Ikarus
   Ikarus::NewtonRaphson nr(nonLinOp);
   nr.setup({eps, maxIter});
-  const auto solverInfo = nr.solve(x);
+  const auto solverState = nr.solve(x);
 
-  std::cout << "success: " << solverInfo.success << "\n";
-  std::cout << "iterations: " << solverInfo.iterations << "\n";
-  std::cout << "residuum: " << solverInfo.residualNorm << "\n";
+  std::cout << "success: " << solverState.success << "\n";
+  std::cout << "iterations: " << solverState.iterations << "\n";
+  std::cout << "residuum: " << solverState.residualNorm << "\n";
   std::cout << "solution: " << x << "\n";
   std::cout << "expected solution: " << xExpected << "\n";
 }
@@ -73,8 +73,8 @@ void newtonRaphsonBasicExampleWithLogger() {
   auto ourSimpleObserver = std::make_shared<OurFirstObserver>();
   nr.subscribe(Ikarus::NonLinearSolverMessages::ITERATION_STARTED, ourSimpleObserver);
 
-  const auto solverInfo = nr.solve(x);
-  if (solverInfo.success)
+  const auto solverState = nr.solve(x);
+  if (solverState.success)
     std::cout << "solution: " << x << "\n";
   else
     std::cout << "The Newton-Raphson procedure failed to converge" << std::endl;
