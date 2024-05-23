@@ -56,7 +56,7 @@ public:
   using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
-  using FERequirementType = typename Traits::FERequirementType;
+  using Requirement = FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
@@ -84,11 +84,11 @@ public:
 protected:
   template <template <typename, int, int> class RT>
   requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
-  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+  auto calculateAtImpl(const Requirement& req, const Dune::FieldVector<double, Traits::mydim>& local,
                        Dune::PriorityTag<0>) const {}
 
   template <typename ScalarType>
-  auto calculateScalarImpl(const FERequirementType& par,
+  auto calculateScalarImpl(const Requirement& par,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
     const auto geometry   = underlying().localView().element().geometry();
@@ -243,6 +243,7 @@ int main(int argc, char** argv) {
 
     /// Create assembler
     auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
+ 
 
     /// Create non-linear operator with potential energy
     Eigen::VectorXd w;
@@ -250,22 +251,14 @@ int main(int argc, char** argv) {
 
     double totalLoad = 2000 * thickness * thickness * thickness;
 
-    auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+    auto req = AutoDiffFE::Requirement();
+      req.insertGlobalSolution( w)
+          .insertParameter( totalLoad);
+    denseAssembler.bind(req);
+    denseAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
 
-    auto kFunction = [&](auto&& disp_, auto&& lambdaLocal) -> auto& {
-      req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-          .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-      return denseAssembler.getMatrix(req);
-    };
-
-    auto rFunction = [&](auto&& disp_, auto&& lambdaLocal) -> auto& {
-      req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp_)
-          .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-      return denseAssembler.getVector(req);
-    };
-
-    const auto& K = kFunction(w, totalLoad);
-    const auto& R = rFunction(w, totalLoad);
+    const auto& K = denseAssembler.matrix();
+    const auto& R = denseAssembler.vector();
     Eigen::LDLT<Eigen::MatrixXd> solver;
     solver.compute(K);
     w -= solver.solve(R);

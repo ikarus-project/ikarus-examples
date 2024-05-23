@@ -54,7 +54,8 @@ public:
   using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
-  using FERequirementType = typename Traits::FERequirementType;
+  using Requirement =  FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
+
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
@@ -67,16 +68,14 @@ public:
     lambdaMat_ = convertLameConstants({.emodul = emod_, .nu = nu_}).toLamesFirstParameter();
   }
 
-  inline double calculateScalar(const FERequirementType& par) const { return calculateScalarImpl<double>(par); }
-
 protected:
   template <template <typename, int, int> class RT>
   requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
-  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+  auto calculateAtImpl(const Requirement& req, const Dune::FieldVector<double, Traits::mydim>& local,
                        Dune::PriorityTag<0>) const {}
 
   template <class ScalarType>
-  auto calculateScalarImpl(const FERequirementType& par,
+  auto calculateScalarImpl(const Requirement& par,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
@@ -209,25 +208,20 @@ int main(int argc, char** argv) {
   auto sparseFlatAssembler = SparseFlatAssembler(fes, dirichletValues);
 
   /// Create function for external forces and stiffness matrix
-  double lambda = 0;
+  double lambda = 1;
   Eigen::VectorXd d;
   d.setZero(basis.flat().size());
 
-  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+  auto req = AutoDiffFE::Requirement();
+      req.insertGlobalSolution(d)
+          .insertParameter( lambda);
 
-  auto fextFunction = [&](auto&& lambdaLocal, auto&& dLocal) -> auto& {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return sparseFlatAssembler.getReducedVector(req);
-  };
-  auto KFunction = [&](auto&& lambdaLocal, auto&& dLocal) -> auto& {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, dLocal)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return sparseFlatAssembler.getReducedMatrix(req);
-  };
+  sparseFlatAssembler.bind(req);
+  sparseFlatAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
+  sparseFlatAssembler.bind(Ikarus::EnforcingDBCOption::Reduced);
 
-  auto K = KFunction(1.0, d);
-  auto R = fextFunction(1.0, d);
+  auto& K = sparseFlatAssembler.matrix();
+  auto& R = sparseFlatAssembler.vector();
   Eigen::SparseLU<decltype(K)> ld;
   ld.compute(K);
   if (ld.info() != Eigen::Success)

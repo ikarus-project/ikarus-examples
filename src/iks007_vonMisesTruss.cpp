@@ -25,6 +25,7 @@
 #include <ikarus/finiteelements/physicshelper.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
+#include <ikarus/solver/nonlinearsolver/nonlinearsolverfactory.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
@@ -56,7 +57,7 @@ public:
   using Traits            = typename PreFE::Traits;
   using BasisHandler      = typename Traits::BasisHandler;
   using FlatBasis         = typename Traits::FlatBasis;
-  using FERequirementType = typename Traits::FERequirementType;
+  using Requirement =  FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
   using LocalView         = typename Traits::LocalView;
   using Geometry          = typename Traits::Geometry;
   using Element           = typename Traits::Element;
@@ -68,11 +69,11 @@ public:
 protected:
   template <template <typename, int, int> class RT>
   requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
-  auto calculateAtImpl(const FERequirementType& req, const Dune::FieldVector<double, Traits::mydim>& local,
+  auto calculateAtImpl(const Requirement& req, const Dune::FieldVector<double, Traits::mydim>& local,
                        Dune::PriorityTag<0>) const {}
 
   template <typename ScalarType>
-  auto calculateScalarImpl(const FERequirementType& par,
+  auto calculateScalarImpl(const Requirement& par,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
@@ -152,36 +153,30 @@ int main(int argc, char** argv) {
       [&](auto& dirichletFlags, auto&& globalIndex) { dirichletFlags[globalIndex] = true; });
 
   /// Create assembler
-  auto denseFlatAssembler = DenseFlatAssembler(fes, dirichletValues);
+  auto denseFlatAssembler = makeDenseFlatAssembler(fes, dirichletValues);
 
   /// Create non-linear operator
   double lambda = 0;
   Eigen::VectorXd d;
   d.setZero(basis.flat().size());
 
-  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
-
-  auto RFunction = [&](auto&& u, auto&& lambdaLocal) -> auto {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    auto R = denseFlatAssembler.getVector(req);
-    R[3] -= -lambdaLocal;
-    return R;
-  };
-  auto KFunction = [&](auto&& u, auto&& lambdaLocal) -> auto& {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, u)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return denseFlatAssembler.getMatrix(req);
-  };
-
-  auto nonLinOp = Ikarus::NonLinearOperator(functions(RFunction, KFunction), parameter(d, lambda));
+  auto req = AutoDiffFE::Requirement();
+      req.insertGlobalSolution(d)
+          .insertParameter( lambda);
+            denseFlatAssembler.bind(req);
+  denseFlatAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
 
   /// Choose linear solver
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::d_LDLT);
 
   /// Create Nonlinear solver for controlroutine, i.e. a Newton-Rahpson object
-  auto nr = Ikarus::makeNewtonRaphson(nonLinOp, std::move(linSolver));
-  nr->setup({.tol = 1e-8, .maxIter = 100});
+    NewtonRaphsonConfig<decltype(linSolver)> nrConfig{
+        .parameters = {.tol = 1e-8, .maxIter = 100},
+          .linearSolver = linSolver
+    };
+
+  Ikarus::NonlinearSolverFactory nrFactory(nrConfig);
+  auto nr = nrFactory.create(denseFlatAssembler);
 
   /// Create Observer to write information of the non-linear solver on the
   /// console
@@ -205,10 +200,10 @@ int main(int argc, char** argv) {
       basis.flat(), d, 2);
   vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter->setFileNamePrefix("iks007_vonMisesTruss");
-  nr->subscribeAll(nonLinearSolverObserver);
 
   /// Create loadcontrol
-  auto lc = Ikarus::LoadControl(std::move(nr), loadSteps, {0, 30});
+  auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
+  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
   lc.subscribeAll({vtkWriter, lvkObserver});
 
   /// Execute!
