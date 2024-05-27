@@ -75,9 +75,11 @@ protected:
                        Dune::PriorityTag<0>) const {}
 
   template <class ScalarType>
-  auto calculateScalarImpl(const Requirement& par,
-                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
-                               std::nullopt) const -> ScalarType {
+  auto calculateScalarImpl(
+      const Requirement &par,
+      ScalarAffordance affo, const std::optional<
+          std::reference_wrapper<const Eigen::VectorX<ScalarType>>> &dx =
+          std::nullopt) const -> ScalarType {
     const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
     const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
     const auto& localView = underlying().localView();

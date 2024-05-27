@@ -88,7 +88,7 @@ protected:
                        Dune::PriorityTag<0>) const {}
 
   template <typename ScalarType>
-  auto calculateScalarImpl(const Requirement& par,
+  auto calculateScalarImpl(const Requirement& par, ScalarAffordance affo,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
     const auto geometry   = underlying().localView().element().geometry();
@@ -243,7 +243,7 @@ int main(int argc, char** argv) {
 
     /// Create assembler
     auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
- 
+
 
     /// Create non-linear operator with potential energy
     Eigen::VectorXd w;
