@@ -199,7 +199,7 @@ using FEType = decltype(makeFE(basis, sk));
   sparseAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
 
  auto nonlinSolver = [&](){
-  if constexpr (SolverType::NewtonRaphson)
+  if constexpr (st==SolverType::NewtonRaphson)
 {
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_UmfPackLU);
   NewtonRaphsonConfig<decltype(linSolver)> nrConfig{
@@ -209,7 +209,7 @@ using FEType = decltype(makeFE(basis, sk));
   Ikarus::NonlinearSolverFactory nrFactory(nrConfig);
   return nrFactory.create(sparseAssembler);
   }
-  else if constexpr (SolverType::TrustRegion)
+  else if constexpr (st==SolverType::TrustRegion)
 {   TrustRegionConfig<> trConfig{
       .parameters = {.verbosity = 1,
              .maxIter   = 30,
