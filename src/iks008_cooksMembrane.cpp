@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
         fes.back().bind(ge);
       }
 
-      auto parseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
+      auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
       Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
   auto req = FEType::Requirement();
       req.insertGlobalSolution(D_Glob)
