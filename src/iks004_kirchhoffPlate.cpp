@@ -254,8 +254,7 @@ int main(int argc, char** argv) {
     auto req = AutoDiffFE::Requirement();
       req.insertGlobalSolution( w)
           .insertParameter( totalLoad);
-    denseAssembler.bind(req);
-    denseAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
+    denseAssembler.bind(req,Ikarus::AffordanceCollections::elastoStatics);
 
     const auto& K = denseAssembler.matrix();
     const auto& R = denseAssembler.vector();
