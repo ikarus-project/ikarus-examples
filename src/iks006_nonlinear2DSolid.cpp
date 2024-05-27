@@ -57,7 +57,8 @@ enum class SolverType
 };
 
 template <GridType gt, SolverType st>
-auto run() using namespace Ikarus;
+auto run() {
+using namespace Ikarus;
 constexpr int gridDim = 2;
 
 auto grid =[]()
