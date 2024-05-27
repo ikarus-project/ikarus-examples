@@ -224,13 +224,13 @@ int main(int argc, char** argv) {
 
   auto& K = sparseFlatAssembler.matrix();
   auto& R = sparseFlatAssembler.vector();
-  Eigen::SparseLU<decltype(K)> ld;
-  ld.compute(K);
-  if (ld.info() != Eigen::Success)
+  Eigen::SparseLU solver(K);
+  
+  if (solver.info() != Eigen::Success)
     DUNE_THROW(Dune::MathError, "Failed Compute");
 
-  d -= sparseFlatAssembler.createFullVector(ld.solve(R));
-  if (ld.info() != Eigen::Success)
+  d -= sparseFlatAssembler.createFullVector(solver.solve(R));
+  if (solver.info() != Eigen::Success)
     DUNE_THROW(Dune::MathError, "Failed Solve");
 
   /// Postprocess
