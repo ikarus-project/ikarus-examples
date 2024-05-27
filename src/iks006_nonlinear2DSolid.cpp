@@ -195,8 +195,7 @@ using FEType = decltype(makeFE(basis, sk));
       req.insertGlobalSolution(d)
           .insertParameter( lambda);
 
-  sparseAssembler->bind(req);
-  sparseAssembler->bind(Ikarus::AffordanceCollections::elastoStatics);
+  sparseAssembler->bind(req,Ikarus::AffordanceCollections::elastoStatics);
 
  auto nonlinSolver = [&](){
   if constexpr (st==SolverType::NewtonRaphson)
