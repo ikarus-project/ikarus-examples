@@ -163,8 +163,8 @@ int main(int argc, char** argv) {
   auto req = AutoDiffFE::Requirement();
       req.insertGlobalSolution(d)
           .insertParameter( lambda);
-            denseFlatAssembler.bind(req);
-  denseFlatAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
+            denseFlatAssembler->bind(req);
+  denseFlatAssembler->bind(Ikarus::AffordanceCollections::elastoStatics);
 
   /// Choose linear solver
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::d_LDLT);
