@@ -92,8 +92,8 @@ protected:
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
     const auto geometry   = underlying().localView().element().geometry();
-    const auto& wGlobal   = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto& lambda    = par.getParameter(Ikarus::FEParameter::loadfactor);
+    const auto &wGlobal = par.globalSolution();
+    const auto& lambda    = par.parameter();
     const auto D          = constitutiveMatrix(Emodul, nu, thickness);
     ScalarType energy     = 0.0;
     const auto& localView = underlying().localView();

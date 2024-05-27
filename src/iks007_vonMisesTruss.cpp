@@ -76,8 +76,8 @@ protected:
   auto calculateScalarImpl(const Requirement& par, ScalarAffordance affo,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
-    const auto& d         = par.getGlobalSolution(Ikarus::FESolutions::displacement);
-    const auto& lambda    = par.getParameter(FEParameter::loadfactor);
+    const auto &d = par.globalSolution();
+    const auto& lambda    = par.parameter();
     const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
     auto& ele             = localView.element();
