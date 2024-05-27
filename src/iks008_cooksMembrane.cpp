@@ -143,14 +143,14 @@ int main(int argc, char** argv) {
         fes.back().bind(ge);
       }
 
-      auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
+      auto parseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
       Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
   auto req = FEType::Requirement();
       req.insertGlobalSolution(D_Glob)
           .insertParameter( lambdaLoad);
 
-  sparseAssembler.bind(req);
-  sparseAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
+  sparseAssembler->bind(req);
+  sparseAssembler->bind(Ikarus::AffordanceCollections::elastoStatics);
 
 
 
