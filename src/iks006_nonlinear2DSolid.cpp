@@ -203,7 +203,7 @@ using FEType = decltype(makeFE(basis, sk));
 {
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_UmfPackLU);
   NewtonRaphsonConfig<decltype(linSolver)> nrConfig{
-        .parameters = {.tol = tol_, .maxIter = 100},
+        .parameters = {.tol = 1e-8, .maxIter = 100},
           .linearSolver = linSolver
     };
   Ikarus::NonlinearSolverFactory nrFactory(nrConfig);
@@ -234,11 +234,6 @@ using FEType = decltype(makeFE(basis, sk));
   lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
 
   lc.subscribeAll(vtkWriter);
-  const auto& nonLinOp= lc.nonlinearSolver().nonLinearOperator();
-  std::cout << "Energy before: " << nonLinOp.value() << std::endl;
-  lc.run();
-  nonLinOp.update<0>();
-  std::cout << "Energy after: " << nonLinOp.value() << std::endl;
 
   // Postprocessing
   auto displacementFunction =
