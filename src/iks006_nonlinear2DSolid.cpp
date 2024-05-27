@@ -110,7 +110,7 @@ else   if constexpr (gt==GridType::NURBSGrid)
   auto ng               = std::make_shared<Grid>(patchData);
   ng->globalRefine(2);
   return ng;
-}();
+}}();
 
   auto gridView        = grid->leafGridView();
   const auto& indexSet = gridView.indexSet();
