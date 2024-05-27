@@ -169,6 +169,8 @@ else if constexpr (gt==GridType::NURBSGrid)
     return fext;
   };
   auto sk = skills(nonLinearElastic(reducedMat), volumeLoad<2>(vL), neumannBoundaryLoad(&neumannBoundary, neumannBl));
+
+using FEType = decltype(makeFE(basis, sk));
   std::vector<decltype(makeFE(basis, sk))> fes;
   for (auto&& ge : elements(gridView)) {
     fes.emplace_back(makeFE(basis, sk));
@@ -189,7 +191,7 @@ else if constexpr (gt==GridType::NURBSGrid)
   d.setZero(basis.flat().size());
   double lambda = 0.0;
 
-  auto req = AutoDiffFE::Requirement();
+  auto req = FEType::Requirement();
       req.insertGlobalSolution(d)
           .insertParameter( lambda);
 
