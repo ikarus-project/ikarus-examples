@@ -191,7 +191,7 @@ using FEType = decltype(makeFE(basis, sk));
   d.setZero(basis.flat().size());
   double lambda = 0.0;
 
-  auto req = FEType::Requirement();
+  auto req = typename FEType::Requirement();
       req.insertGlobalSolution(d)
           .insertParameter( lambda);
 
@@ -258,6 +258,6 @@ using FEType = decltype(makeFE(basis, sk));
 
 int main(int argc, char** argv) {
   Ikarus::init(argc, argv);
-  run<gridType::ALUGrid, solverType::NewtonRaphson>();
-  run<gridType::ALUGrid, solverType::TrustRegion>();
+  run<GridType::ALUGrid, SolverType::NewtonRaphson>();
+  run<GridType::ALUGrid, SolverType::TrustRegion>();
 }
