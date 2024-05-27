@@ -162,8 +162,8 @@ int main(int argc, char** argv) {
                    durationAssembly.count(), numberOfEASParameters, basis.flat().size());
 
       timeVec.push_back(durationAssembly.count());
-      const auto& K    = nonLinOp.derivative();
-      const auto& Fext = nonLinOp.value();
+      const auto& K    = nonLinOp.secondDerivative();
+      const auto& Fext = nonLinOp.derivative();
 
       /// solve the linear system
       auto linSolver   = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_CholmodSupernodalLLT);
