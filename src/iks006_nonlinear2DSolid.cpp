@@ -56,7 +56,7 @@ enum class SolverType
   TrustRegion
 };
 
-template <gridType gt, solverType st>
+template <GridType gt, SolverType st>
 auto run() using namespace Ikarus;
 constexpr int gridDim = 2;
 
