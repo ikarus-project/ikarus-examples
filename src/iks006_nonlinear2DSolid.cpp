@@ -171,7 +171,7 @@ else if constexpr (gt==GridType::NURBSGrid)
   auto sk = skills(nonLinearElastic(reducedMat), volumeLoad<2>(vL), neumannBoundaryLoad(&neumannBoundary, neumannBl));
 
 using FEType = decltype(makeFE(basis, sk));
-  std::vector<decltype(makeFE(basis, sk))> fes;
+  std::vector<FEType> fes;
   for (auto&& ge : elements(gridView)) {
     fes.emplace_back(makeFE(basis, sk));
     fes.back().bind(ge);
@@ -195,8 +195,8 @@ using FEType = decltype(makeFE(basis, sk));
       req.insertGlobalSolution(d)
           .insertParameter( lambda);
 
-  sparseAssembler.bind(req);
-  sparseAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
+  sparseAssembler->bind(req);
+  sparseAssembler->bind(Ikarus::AffordanceCollections::elastoStatics);
 
  auto nonlinSolver = [&](){
   if constexpr (st==SolverType::NewtonRaphson)
