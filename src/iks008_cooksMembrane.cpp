@@ -149,8 +149,7 @@ int main(int argc, char** argv) {
       req.insertGlobalSolution(D_Glob)
           .insertParameter( lambdaLoad);
 
-  sparseAssembler->bind(req);
-  sparseAssembler->bind(Ikarus::AffordanceCollections::elastoStatics);
+  sparseAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics,Ikarus::EnforcingDBCOption::Full);
 
 
 
