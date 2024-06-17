@@ -149,12 +149,12 @@ int main(int argc, char** argv) {
       req.insertGlobalSolution(D_Glob)
           .insertParameter( lambdaLoad);
 
-  sparseAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics,Ikarus::EnforcingDBCOption::Full);
-
+     sparseAssembler->bind(req);
+     sparseAssembler->bind(Ikarus::EnforcingDBCOption::Full);
 
 
       auto startAssembly = std::chrono::high_resolution_clock::now();
-      auto nonLinOp = Ikarus::NonLinearOperatorFactory::op(sparseAssembler);
+      auto nonLinOp = Ikarus::NonLinearOperatorFactory::op(sparseAssembler,Ikarus::AffordanceCollection(Ikarus::VectorAffordance::forces,Ikarus::MatrixAffordance::stiffness));
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",
