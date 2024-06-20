@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
 
   sparseFlatAssembler.bind(req);
   sparseFlatAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
-  sparseFlatAssembler.bind(Ikarus::EnforcingDBCOption::Reduced);
+  sparseFlatAssembler.bind(Ikarus::DBCOption::Reduced);
 
   auto& K = sparseFlatAssembler.matrix();
   auto& R = sparseFlatAssembler.vector();

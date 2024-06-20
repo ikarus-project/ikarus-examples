@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
           .insertParameter( lambdaLoad);
 
      sparseAssembler->bind(req);
-     sparseAssembler->bind(Ikarus::EnforcingDBCOption::Full);
+     sparseAssembler->bind(Ikarus::DBCOption::Full);
 
 
       auto startAssembly = std::chrono::high_resolution_clock::now();
