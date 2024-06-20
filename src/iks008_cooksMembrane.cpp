@@ -136,32 +136,25 @@ int main(int argc, char** argv) {
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
       auto sk = skills(linearElastic({E, nu}), eas(numberOfEASParameters), volumeLoad<2>(vL),
                        neumannBoundaryLoad(&neumannBoundary, neumannBl));
-      std::vector<decltype(makeFE(basis, sk))> fes;
+      using FEType = decltype(makeFE(basis, sk));
+      std::vector<FEType> fes;
       for (auto&& ge : elements(gridView)) {
         fes.emplace_back(makeFE(basis, sk));
         fes.back().bind(ge);
       }
 
-      auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
-
-      auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
-
-      auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-        req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-            .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-        return sparseAssembler.getMatrix(req);
-      };
-
-      auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-        req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-            .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-        return sparseAssembler.getVector(req);
-      };
-
+      auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
       Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
+  auto req = FEType::Requirement();
+      req.insertGlobalSolution(D_Glob)
+          .insertParameter( lambdaLoad);
+
+     sparseAssembler->bind(req);
+     sparseAssembler->bind(Ikarus::DBCOption::Full);
+
 
       auto startAssembly = std::chrono::high_resolution_clock::now();
-      auto nonLinOp = Ikarus::NonLinearOperator(functions(residualFunction, KFunction), parameter(D_Glob, lambdaLoad));
+      auto nonLinOp = Ikarus::NonLinearOperatorFactory::op(sparseAssembler,Ikarus::AffordanceCollection(Ikarus::VectorAffordance::forces,Ikarus::MatrixAffordance::stiffness));
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",

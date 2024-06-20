@@ -29,6 +29,7 @@
 #include <ikarus/io/resultevaluators.hh>
 #include <ikarus/io/resultfunction.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
+#include <ikarus/solver/nonlinearsolver/nonlinearsolverfactory.hh>
 #include <ikarus/solver/nonlinearsolver/trustregion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
@@ -41,29 +42,35 @@
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 // The following grid types (gridType) are included in this example
-// 0 - ALUGrid
-// 1 - YaspGrid
-// 2 - NURBSGrid
+enum class GridType
+{
+  ALUGrid,
+  YaspGrid,
+  NURBSGrid
+};
 
 // The following solver types (solverType) are included in this example
-// 0 - Newton Raphson method
-// 1 - Trust region method
+enum class SolverType
+{
+  NewtonRaphson,
+  TrustRegion
+};
 
-#define gridType 2
-#define solverType 0
+template <GridType gt, SolverType st>
+auto run() {
+using namespace Ikarus;
+constexpr int gridDim = 2;
 
-int main(int argc, char** argv) {
-  Ikarus::init(argc, argv);
-  using namespace Ikarus;
-  constexpr int gridDim = 2;
-
-#if gridType == 0
+auto grid =[]()
+{
+  if constexpr (gt==GridType::ALUGrid)
+{
   using Grid = Dune::ALUGrid<gridDim, 2, Dune::simplex, Dune::conforming>;
-  auto grid  = Dune::GmshReader<Grid>::read("auxiliaryFiles/unstructuredTrianglesfine.msh", false);
-  grid->globalRefine(1);
-#endif
-
-#if gridType == 1
+  auto alg  = Dune::GmshReader<Grid>::read("auxiliaryFiles/unstructuredTrianglesfine.msh", false);
+  alg->globalRefine(1);
+  return alg;
+}else   if constexpr (gt==GridType::YaspGrid)
+{
   using Grid        = Dune::YaspGrid<gridDim>;
   const double L    = 1;
   const double h    = 1;
@@ -72,11 +79,11 @@ int main(int argc, char** argv) {
 
   Dune::FieldVector<double, 2> bbox       = {L, h};
   std::array<int, 2> elementsPerDirection = {elex, eley};
-  auto grid                               = std::make_shared<Grid>(bbox, elementsPerDirection);
-#endif
-
-#if gridType == 2
-  constexpr auto dimworld              = 2;
+  auto yg                               = std::make_shared<Grid>(bbox, elementsPerDirection);
+  return yg;
+}
+else   if constexpr (gt==GridType::NURBSGrid)
+ { constexpr auto dimworld              = 2;
   const std::array<int, gridDim> order = {2, 2};
 
   const std::array<std::vector<double>, gridDim> knotSpans = {
@@ -100,9 +107,10 @@ int main(int argc, char** argv) {
   patchData.knotSpans     = knotSpans;
   patchData.degree        = order;
   patchData.controlPoints = controlNet;
-  auto grid               = std::make_shared<Grid>(patchData);
-  grid->globalRefine(2);
-#endif
+  auto ng               = std::make_shared<Grid>(patchData);
+  ng->globalRefine(2);
+  return ng;
+}}();
 
   auto gridView        = grid->leafGridView();
   const auto& indexSet = gridView.indexSet();
@@ -126,13 +134,12 @@ int main(int argc, char** argv) {
   BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
   using namespace Dune::Functions::BasisFactory;
-
-#if gridType == 0 or gridType == 1
-  auto basis = Ikarus::makeBasis(gridView, power<gridDim>(lagrange<1>()));
-#endif
-#if (gridType == 2)
-  auto basis = Ikarus::makeBasis(gridView, power<gridDim>(nurbs()));
-#endif
+auto basis =[&](){
+  if constexpr (gt==GridType::ALUGrid or gt==GridType::YaspGrid)
+    return Ikarus::makeBasis(gridView, power<gridDim>(lagrange<1>()));
+else if constexpr (gt==GridType::NURBSGrid)
+  return Ikarus::makeBasis(gridView, power<gridDim>(nurbs()));
+}();
 
   std::cout << "This gridview contains: " << std::endl;
   std::cout << gridView.size(2) << " vertices" << std::endl;
@@ -162,7 +169,9 @@ int main(int argc, char** argv) {
     return fext;
   };
   auto sk = skills(nonLinearElastic(reducedMat), volumeLoad<2>(vL), neumannBoundaryLoad(&neumannBoundary, neumannBl));
-  std::vector<decltype(makeFE(basis, sk))> fes;
+
+using FEType = decltype(makeFE(basis, sk));
+  std::vector<FEType> fes;
   for (auto&& ge : elements(gridView)) {
     fes.emplace_back(makeFE(basis, sk));
     fes.back().bind(ge);
@@ -176,50 +185,42 @@ int main(int argc, char** argv) {
       dirichletFlags[localView.index(localIndex)] = true;
   });
 
-  auto sparseAssembler = SparseFlatAssembler(fes, dirichletValues);
+  auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
 
   Eigen::VectorXd d;
   d.setZero(basis.flat().size());
   double lambda = 0.0;
 
-  auto req = FErequirements().addAffordance(Ikarus::AffordanceCollections::elastoStatics);
+  auto req = typename FEType::Requirement();
+      req.insertGlobalSolution(d)
+          .insertParameter( lambda);
 
-  auto residualFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return sparseAssembler.getVector(req);
-  };
+  sparseAssembler->bind(req,Ikarus::AffordanceCollections::elastoStatics,Ikarus::DBCOption::Full);
 
-  auto KFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return sparseAssembler.getMatrix(req);
-  };
-
-  auto energyFunction = [&](auto&& disp, auto&& lambdaLocal) -> auto& {
-    req.insertGlobalSolution(Ikarus::FESolutions::displacement, disp)
-        .insertParameter(Ikarus::FEParameter::loadfactor, lambdaLocal);
-    return sparseAssembler.getScalar(req);
-  };
-
-  auto nonLinOp =
-      Ikarus::NonLinearOperator(functions(energyFunction, residualFunction, KFunction), parameter(d, lambda));
-
+ auto nonlinSolver = [&](){
+  if constexpr (st==SolverType::NewtonRaphson)
+{
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_UmfPackLU);
-
-#if solverType == 0
-  auto nr = Ikarus::makeNewtonRaphson(nonLinOp.subOperator<1, 2>(), std::move(linSolver));
-#endif
-#if solverType == 1
-  auto nr = Ikarus::makeTrustRegion(nonLinOp);
-  nr->setup({.verbosity = 1,
+  NewtonRaphsonConfig<decltype(linSolver)> nrConfig{
+        .parameters = {.tol = 1e-8, .maxIter = 100},
+          .linearSolver = linSolver
+    };
+  Ikarus::NonlinearSolverFactory nrFactory(nrConfig);
+  return nrFactory.create(sparseAssembler);
+  }
+  else if constexpr (st==SolverType::TrustRegion)
+{   TrustRegionConfig<> trConfig{
+      .parameters = {.verbosity = 1,
              .maxIter   = 30,
              .grad_tol  = 1e-8,
              .corr_tol  = 1e-8,
              .useRand   = false,
              .rho_reg   = 1e6,
-             .Delta0    = 1});
-#endif
+             .Delta0    = 1}
+  };
+  Ikarus::NonlinearSolverFactory trFactory(trConfig);
+  return trFactory.create(sparseAssembler);}
+}();
 
   auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
 
@@ -227,15 +228,11 @@ int main(int argc, char** argv) {
       basis.flat(), d, 2);
   vtkWriter->setFileNamePrefix("iks006_nonlinear2DSolid");
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
-  nr->subscribeAll(nonLinearSolverObserver);
 
-  auto lc = Ikarus::LoadControl(nr, 20, {0, 2000});
+  auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
+  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
 
   lc.subscribeAll(vtkWriter);
-  std::cout << "Energy before: " << nonLinOp.value() << std::endl;
-  lc.run();
-  nonLinOp.update<0>();
-  std::cout << "Energy after: " << nonLinOp.value() << std::endl;
 
   // Postprocessing
   auto displacementFunction =
@@ -250,4 +247,11 @@ int main(int argc, char** argv) {
   resultWriter.addVertexData(vonMisesFunction);
 
   resultWriter.write("iks006_nonlinear2DSolid_Result");
+}
+
+
+int main(int argc, char** argv) {
+  Ikarus::init(argc, argv);
+  run<GridType::ALUGrid, SolverType::NewtonRaphson>();
+  run<GridType::ALUGrid, SolverType::TrustRegion>();
 }
