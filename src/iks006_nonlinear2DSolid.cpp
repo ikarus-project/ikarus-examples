@@ -227,7 +227,7 @@ auto run() {
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
   lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
-  -lc.subscribeAll(vtkWriter);
+  lc.subscribeAll(vtkWriter);
 
   // Postprocessing
   auto vonMisesFunction =
