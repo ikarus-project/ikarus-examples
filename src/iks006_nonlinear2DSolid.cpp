@@ -227,17 +227,16 @@ auto run() {
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
   lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
-
-  lc.subscribeAll(vtkWriter);
+  -lc.subscribeAll(vtkWriter);
 
   // Postprocessing
   auto vonMisesFunction =
-      Ikarus::makeResultFunction<ResultType::PK2Stress, ResultEvaluators::VonMises>(sparseAssembler);
+      Ikarus::makeResultFunction<ResultTypes::PK2Stress, ResultEvaluators::VonMises>(sparseAssembler);
 
   using Ikarus::Vtk::asPointData;
   Ikarus::Vtk::Writer writer(sparseAssembler);
 
-  writer.addResult<Ikarus::ResultTypes::PK2Stress>(asPointData);
+  writer.template addResult<Ikarus::ResultTypes::PK2Stress>(asPointData);
   writer.addResultFunction(std::move(vonMisesFunction), asPointData);
   writer.addInterpolation(d, basis.flat(), "displacement", asPointData);
 
