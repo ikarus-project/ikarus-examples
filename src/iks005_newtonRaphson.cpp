@@ -8,6 +8,7 @@
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
+#include <ikarus/utils/observer/observable.hh>
 
 auto f(double& x) { return 0.5 * x * x + x - 2; }
 auto df(double& x) { return x + 1; }
@@ -36,19 +37,19 @@ void newtonRaphsonVeryBasicExample() {
   /// Implementation with Ikarus
   Ikarus::NewtonRaphson nr(nonLinOp);
   nr.setup({eps, maxIter});
-  const auto solverInfo = nr.solve(x);
+  const auto solverState = nr.solve(x);
 
-  std::cout << "success: " << solverInfo.success << "\n";
-  std::cout << "iterations: " << solverInfo.iterations << "\n";
-  std::cout << "residuum: " << solverInfo.residualNorm << "\n";
+  std::cout << "success: " << solverState.success << "\n";
+  std::cout << "iterations: " << solverState.iterations << "\n";
+  std::cout << "residuum: " << solverState.residualNorm << "\n";
   std::cout << "solution: " << x << "\n";
   std::cout << "expected solution: " << xExpected << "\n";
 }
 
-class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages>
+class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverObservable>
 {
 public:
-  void updateImpl(Ikarus::NonLinearSolverMessages message) override {
+  void updateImpl(MessageType message, const StateType&) override {
     if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED)
       std::cout << "Iteration started.\n";
   }
@@ -71,13 +72,9 @@ void newtonRaphsonBasicExampleWithLogger() {
   // create observer and subscribe to Newton-Rhapson
   auto ourSimpleObserver = std::make_shared<OurFirstObserver>();
   nr.subscribe(Ikarus::NonLinearSolverMessages::ITERATION_STARTED, ourSimpleObserver);
-  // nr.subscribeAll(ourSimpleObserver);
-  // auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
-  // nr.subscribe(Ikarus::NonLinearSolverMessages::FINISHED_SUCESSFULLY,
-  // nonLinearSolverObserver); nr.subscribeAll(nonLinearSolverObserver);
 
-  const auto solverInfo = nr.solve(x);
-  if (solverInfo.success)
+  const auto solverState = nr.solve(x);
+  if (solverState.success)
     std::cout << "solution: " << x << "\n";
   else
     std::cout << "The Newton-Raphson procedure failed to converge" << std::endl;

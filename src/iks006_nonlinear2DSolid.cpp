@@ -233,6 +233,10 @@ using FEType = decltype(makeFE(basis, sk));
   lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
 
   lc.subscribeAll(vtkWriter);
+  std::cout << "Energy before: " << nonLinOp.value() << std::endl;
+  const auto controlState = lc.run();
+  nonLinOp.update<0>();
+  std::cout << "Energy after: " << nonLinOp.value() << std::endl;
 
   // Postprocessing
   auto displacementFunction =
@@ -247,6 +251,7 @@ using FEType = decltype(makeFE(basis, sk));
   resultWriter.addVertexData(vonMisesFunction);
 
   resultWriter.write("iks006_nonlinear2DSolid_Result");
+  return not(controlState.success);
 }
 
 
