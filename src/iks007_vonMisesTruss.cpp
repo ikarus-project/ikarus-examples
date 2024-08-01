@@ -54,14 +54,15 @@ template <typename PreFE, typename FE>
 class Truss
 {
 public:
-  using Traits            = typename PreFE::Traits;
-  using BasisHandler      = typename Traits::BasisHandler;
-  using FlatBasis         = typename Traits::FlatBasis;
-  using Requirement =  FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
-  using LocalView         = typename Traits::LocalView;
-  using Geometry          = typename Traits::Geometry;
-  using Element           = typename Traits::Element;
-  using Pre               = TrussPre;
+  using Traits       = typename PreFE::Traits;
+  using BasisHandler = typename Traits::BasisHandler;
+  using FlatBasis    = typename Traits::FlatBasis;
+  using Requirement =
+      FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
+  using LocalView = typename Traits::LocalView;
+  using Geometry  = typename Traits::Geometry;
+  using Element   = typename Traits::Element;
+  using Pre       = TrussPre;
 
   Truss(Pre pre)
       : EA{pre.EA} {}
@@ -76,7 +77,7 @@ protected:
   auto calculateScalarImpl(const Requirement& par, ScalarAffordance affo,
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
-    const auto &d = par.globalSolution();
+    const auto& d         = par.globalSolution();
     const auto& lambda    = par.parameter();
     const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
@@ -161,18 +162,17 @@ int main(int argc, char** argv) {
   d.setZero(basis.flat().size());
 
   auto req = AutoDiffFE::Requirement();
-      req.insertGlobalSolution(d)
-          .insertParameter( lambda);
-            denseFlatAssembler->bind(req,Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
+  req.insertGlobalSolution(d).insertParameter(lambda);
+  denseFlatAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
   /// Choose linear solver
   auto linSolver = Ikarus::LinearSolver(Ikarus::SolverTypeTag::d_LDLT);
 
   /// Create Nonlinear solver for controlroutine, i.e. a Newton-Rahpson object
-    NewtonRaphsonConfig<decltype(linSolver)> nrConfig{
-        .parameters = {.tol = 1e-8, .maxIter = 100},
-          .linearSolver = linSolver
-    };
+  NewtonRaphsonConfig<decltype(linSolver)> nrConfig{
+      .parameters = {.tol = 1e-8, .maxIter = 100},
+        .linearSolver = linSolver
+  };
 
   Ikarus::NonlinearSolverFactory nrFactory(nrConfig);
   auto nr = nrFactory.create(denseFlatAssembler);

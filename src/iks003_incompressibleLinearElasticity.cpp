@@ -51,16 +51,17 @@ template <typename PreFE, typename FE>
 class IncompressibleSolid
 {
 public:
-  using Traits            = typename PreFE::Traits;
-  using BasisHandler      = typename Traits::BasisHandler;
-  using FlatBasis         = typename Traits::FlatBasis;
-  using Requirement =  FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
+  using Traits       = typename PreFE::Traits;
+  using BasisHandler = typename Traits::BasisHandler;
+  using FlatBasis    = typename Traits::FlatBasis;
+  using Requirement =
+      FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
 
-  using LocalView         = typename Traits::LocalView;
-  using Geometry          = typename Traits::Geometry;
-  using Element           = typename Traits::Element;
-  using GlobalIndex       = typename Traits::GlobalIndex;
-  using Pre               = IncompressibleSolidPre;
+  using LocalView   = typename Traits::LocalView;
+  using Geometry    = typename Traits::Geometry;
+  using Element     = typename Traits::Element;
+  using GlobalIndex = typename Traits::GlobalIndex;
+  using Pre         = IncompressibleSolidPre;
   IncompressibleSolid(Pre pre)
       : emod_{pre.emod},
         nu_{pre.nu} {
@@ -75,12 +76,10 @@ protected:
                        Dune::PriorityTag<0>) const {}
 
   template <class ScalarType>
-  auto calculateScalarImpl(
-      const Requirement &par,
-      ScalarAffordance affo, const std::optional<
-          std::reference_wrapper<const Eigen::VectorX<ScalarType>>> &dx =
-          std::nullopt) const -> ScalarType {
-    const auto &d = par.globalSolution();
+  auto calculateScalarImpl(const Requirement& par, ScalarAffordance affo,
+                           const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
+                               std::nullopt) const -> ScalarType {
+    const auto& d         = par.globalSolution();
     const auto& lambda    = par.parameter();
     const auto& localView = underlying().localView();
     const auto& tree      = localView.tree();
@@ -215,8 +214,7 @@ int main(int argc, char** argv) {
   d.setZero(basis.flat().size());
 
   auto req = AutoDiffFE::Requirement();
-      req.insertGlobalSolution(d)
-          .insertParameter( lambda);
+  req.insertGlobalSolution(d).insertParameter(lambda);
 
   sparseFlatAssembler.bind(req);
   sparseFlatAssembler.bind(Ikarus::AffordanceCollections::elastoStatics);
@@ -225,7 +223,7 @@ int main(int argc, char** argv) {
   auto& K = sparseFlatAssembler.matrix();
   auto& R = sparseFlatAssembler.vector();
   Eigen::SparseLU solver(K);
-  
+
   if (solver.info() != Eigen::Success)
     DUNE_THROW(Dune::MathError, "Failed Compute");
 
