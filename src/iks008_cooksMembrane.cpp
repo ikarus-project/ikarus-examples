@@ -134,8 +134,8 @@ int main(int argc, char** argv) {
       }
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
-      auto sk = skills(linearElastic({E, nu}), eas(numberOfEASParameters), volumeLoad<2>(vL),
-                       neumannBoundaryLoad(&neumannBoundary, neumannBl));
+      auto sk      = skills(linearElastic({E, nu}), eas(numberOfEASParameters), volumeLoad<2>(vL),
+                            neumannBoundaryLoad(&neumannBoundary, neumannBl));
       using FEType = decltype(makeFE(basis, sk));
       std::vector<FEType> fes;
       for (auto&& ge : elements(gridView)) {
@@ -143,18 +143,18 @@ int main(int argc, char** argv) {
         fes.back().bind(ge);
       }
 
-      auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
+      auto sparseAssembler   = makeSparseFlatAssembler(fes, dirichletValues);
       Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
-  auto req = FEType::Requirement();
-      req.insertGlobalSolution(D_Glob)
-          .insertParameter( lambdaLoad);
+      auto req               = FEType::Requirement();
+      req.insertGlobalSolution(D_Glob).insertParameter(lambdaLoad);
 
-     sparseAssembler->bind(req);
-     sparseAssembler->bind(Ikarus::DBCOption::Full);
-
+      sparseAssembler->bind(req);
+      sparseAssembler->bind(Ikarus::DBCOption::Full);
 
       auto startAssembly = std::chrono::high_resolution_clock::now();
-      auto nonLinOp = Ikarus::NonLinearOperatorFactory::op(sparseAssembler,Ikarus::AffordanceCollection(Ikarus::VectorAffordance::forces,Ikarus::MatrixAffordance::stiffness));
+      auto nonLinOp      = Ikarus::NonLinearOperatorFactory::op(
+          sparseAssembler,
+          Ikarus::AffordanceCollection(Ikarus::VectorAffordance::forces, Ikarus::MatrixAffordance::stiffness));
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
       auto durationAssembly = duration_cast<std::chrono::milliseconds>(stopAssembly - startAssembly);
       spdlog::info("The assembly took {:>6d} milliseconds with {} EAS parameters and {:>7d} dofs",

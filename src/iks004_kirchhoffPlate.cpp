@@ -53,14 +53,15 @@ template <typename PreFE, typename FE>
 class KirchhoffPlate
 {
 public:
-  using Traits            = typename PreFE::Traits;
-  using BasisHandler      = typename Traits::BasisHandler;
-  using FlatBasis         = typename Traits::FlatBasis;
-  using Requirement = FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
-  using LocalView         = typename Traits::LocalView;
-  using Geometry          = typename Traits::Geometry;
-  using Element           = typename Traits::Element;
-  using Pre               = KirchhoffPlatePre;
+  using Traits       = typename PreFE::Traits;
+  using BasisHandler = typename Traits::BasisHandler;
+  using FlatBasis    = typename Traits::FlatBasis;
+  using Requirement =
+      FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
+  using LocalView = typename Traits::LocalView;
+  using Geometry  = typename Traits::Geometry;
+  using Element   = typename Traits::Element;
+  using Pre       = KirchhoffPlatePre;
 
   KirchhoffPlate(Pre pre)
       : Emodul{pre.Emodul},
@@ -92,7 +93,7 @@ protected:
                            const std::optional<std::reference_wrapper<const Eigen::VectorX<ScalarType>>>& dx =
                                std::nullopt) const -> ScalarType {
     const auto geometry   = underlying().localView().element().geometry();
-    const auto &wGlobal = par.globalSolution();
+    const auto& wGlobal   = par.globalSolution();
     const auto& lambda    = par.parameter();
     const auto D          = constitutiveMatrix(Emodul, nu, thickness);
     ScalarType energy     = 0.0;
@@ -244,7 +245,6 @@ int main(int argc, char** argv) {
     /// Create assembler
     auto denseAssembler = DenseFlatAssembler(fes, dirichletValues);
 
-
     /// Create non-linear operator with potential energy
     Eigen::VectorXd w;
     w.setZero(basis.flat().size());
@@ -252,9 +252,8 @@ int main(int argc, char** argv) {
     double totalLoad = 2000 * thickness * thickness * thickness;
 
     auto req = AutoDiffFE::Requirement();
-      req.insertGlobalSolution( w)
-          .insertParameter( totalLoad);
-    denseAssembler.bind(req,Ikarus::AffordanceCollections::elastoStatics);
+    req.insertGlobalSolution(w).insertParameter(totalLoad);
+    denseAssembler.bind(req, Ikarus::AffordanceCollections::elastoStatics);
 
     const auto& K = denseAssembler.matrix();
     const auto& R = denseAssembler.vector();
