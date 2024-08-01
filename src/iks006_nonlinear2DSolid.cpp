@@ -233,7 +233,7 @@ auto run() {
   auto vonMisesFunction =
       Ikarus::makeResultFunction<ResultTypes::PK2Stress, ResultEvaluators::VonMises>(sparseAssembler);
 
-  using Ikarus::Vtk::asPointData;
+  using Ikarus::Vtk::DataTag::asPointData;
   Ikarus::Vtk::Writer writer(sparseAssembler);
 
   writer.template addResult<Ikarus::ResultTypes::PK2Stress>(asPointData);
