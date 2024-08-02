@@ -19,6 +19,7 @@
 #include <autodiff/forward/dual/dual.hpp>
 
 #include <ikarus/assembler/simpleassemblers.hh>
+#include <ikarus/controlroutines/controlstate.hh>
 #include <ikarus/controlroutines/loadcontrol.hh>
 #include <ikarus/finiteelements/autodifffe.hh>
 #include <ikarus/finiteelements/fefactory.hh>
@@ -35,6 +36,7 @@
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/genericobserver.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
+#include <ikarus/utils/observer/observable.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
@@ -186,7 +188,7 @@ int main(int argc, char** argv) {
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
   /// Create Observer which executes when control routines messages
   /// SOLUTION_CHANGED
-  auto lvkObserver = std::make_shared<Ikarus::GenericObserver<Ikarus::ControlMessages>>(
+  auto lvkObserver = std::make_shared<Ikarus::GenericObserver<Ikarus::ControlObservable>>(
       Ikarus::ControlMessages::SOLUTION_CHANGED, [&](int step) {
         lambdaAndDisp(0, step) = lambda;
         lambdaAndDisp(1, step) = d[2];
@@ -206,7 +208,7 @@ int main(int argc, char** argv) {
   lc.subscribeAll({vtkWriter, lvkObserver});
 
   /// Execute!
-  lc.run();
+  const auto controlState = lc.run();
 
   /// Postprocess
   using namespace matplot;
@@ -234,4 +236,5 @@ int main(int argc, char** argv) {
   // f->draw();
   // using namespace std::chrono_literals;
   // std::this_thread::sleep_for(5s);
+  return not(controlState.success);
 }

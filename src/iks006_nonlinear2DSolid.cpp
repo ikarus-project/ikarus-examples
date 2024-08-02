@@ -228,6 +228,10 @@ auto run() {
   lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
 
   lc.subscribeAll(vtkWriter);
+  std::cout << "Energy before: " << nonLinOp.value() << std::endl;
+  const auto controlState = lc.run();
+  nonLinOp.update<0>();
+  std::cout << "Energy after: " << nonLinOp.value() << std::endl;
 
   // Postprocessing
   auto displacementFunction =
@@ -242,6 +246,7 @@ auto run() {
   resultWriter.addVertexData(vonMisesFunction);
 
   resultWriter.write("iks006_nonlinear2DSolid_Result");
+  return not(controlState.success);
 }
 
 int main(int argc, char** argv) {
