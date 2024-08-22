@@ -24,6 +24,7 @@
 #include <ikarus/finiteelements/mechanics/enhancedassumedstrains.hh>
 #include <ikarus/finiteelements/mechanics/linearelastic.hh>
 #include <ikarus/finiteelements/mechanics/loads.hh>
+#include <ikarus/finiteelements/mechanics/materials/linearelasticity.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/dirichletvalues.hh>
@@ -32,6 +33,7 @@
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
+
 
 using namespace Ikarus;
 using namespace Dune::Indices;
@@ -134,7 +136,9 @@ int main(int argc, char** argv) {
       }
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
-      auto sk      = skills(linearElastic({E, nu}), eas(numberOfEASParameters), volumeLoad<2>(vL),
+
+      auto linMat  = Ikarus::LinearElasticity(Ikarus::toLamesFirstParameterAndShearModulus({.emodul = E, .nu = nu}));
+      auto sk      = skills(linearElastic(planeStress(linMat)), eas(numberOfEASParameters), volumeLoad<2>(vL),
                             neumannBoundaryLoad(&neumannBoundary, neumannBl));
       using FEType = decltype(makeFE(basis, sk));
       std::vector<FEType> fes;
