@@ -28,6 +28,7 @@
 #include <ikarus/finiteelements/mechanics/nonlinearelastic.hh>
 #include <ikarus/io/resultevaluators.hh>
 #include <ikarus/io/resultfunction.hh>
+#include <ikarus/io/vtkwriter.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/solver/nonlinearsolver/nonlinearsolverfactory.hh>
 #include <ikarus/solver/nonlinearsolver/trustregion.hh>
@@ -226,22 +227,20 @@ auto run() {
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
   lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
-
   lc.subscribeAll(vtkWriter);
 
   // Postprocessing
-  auto displacementFunction =
-      Dune::Functions::makeDiscreteGlobalBasisFunction<Dune::FieldVector<double, 2>>(basis.flat(), d);
-  auto stressFunction   = Ikarus::makeResultFunction<ResultTypes::PK2Stress>(&fes, req);
-  auto vonMisesFunction = Ikarus::makeResultFunction<ResultTypes::PK2Stress, ResultEvaluators::VonMises>(&fes, req);
+  auto vonMisesFunction =
+      Ikarus::makeResultFunction<ResultTypes::PK2Stress, ResultEvaluators::VonMises>(sparseAssembler);
 
-  Dune::VTKWriter resultWriter(gridView);
-  resultWriter.addVertexData(displacementFunction,
-                             Dune::VTK::FieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2));
-  resultWriter.addVertexData(stressFunction);
-  resultWriter.addVertexData(vonMisesFunction);
+  using Ikarus::Vtk::DataTag::asPointData;
+  Ikarus::Vtk::Writer writer(sparseAssembler);
 
-  resultWriter.write("iks006_nonlinear2DSolid_Result");
+  writer.template addResult<Ikarus::ResultTypes::PK2Stress>(asPointData);
+  writer.addResultFunction(std::move(vonMisesFunction), asPointData);
+  writer.addInterpolation(d, basis.flat(), "displacement", asPointData);
+
+  writer.write("iks006_nonlinear2DSolid_Result_" + Dune::className(st));
 }
 
 int main(int argc, char** argv) {
