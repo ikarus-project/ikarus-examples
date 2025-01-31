@@ -137,9 +137,9 @@ int main(int argc, char** argv) {
 
       BoundaryPatch<decltype(gridView)> neumannBoundary(gridView, neumannVertices);
 
-      auto linMat = Materials::LinearElasticity(Ikarus::toLamesFirstParameterAndShearModulus({.emodul = E, .nu = nu}));
-      auto sk     = skills(linearElastic(Materials::planeStress(linMat)), eas(numberOfEASParameters), Ikarus::volumeLoad<2>(vL),
-                           neumannBoundaryLoad(&neumannBoundary, neumannBl));
+      auto linMat  = Materials::LinearElasticity(Ikarus::toLamesFirstParameterAndShearModulus({.emodul = E, .nu = nu}));
+      auto sk      = skills(linearElastic(Materials::planeStress(linMat)), eas(numberOfEASParameters),
+                            Ikarus::volumeLoad<2>(vL), neumannBoundaryLoad(&neumannBoundary, neumannBl));
       using FEType = decltype(makeFE(basis, sk));
       std::vector<FEType> fes;
       for (auto&& ge : elements(gridView)) {
