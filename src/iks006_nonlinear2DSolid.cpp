@@ -15,8 +15,6 @@
 #include <dune/iga/nurbsbasis.hh>
 #include <dune/iga/nurbsgrid.hh>
 
-#include "spdlog/spdlog.h"
-
 #include <Eigen/Core>
 
 #include <ikarus/assembler/simpleassemblers.hh>
@@ -151,8 +149,8 @@ auto run() {
 
   auto matParameter = Ikarus::toLamesFirstParameterAndShearModulus({.emodul = 1000, .nu = 0.3});
 
-  Ikarus::StVenantKirchhoff matSVK(matParameter);
-  auto reducedMat = planeStress(matSVK, 1e-8);
+  Materials::StVenantKirchhoff matSVK(matParameter);
+  auto reducedMat = Materials::planeStress(matSVK, 1e-8);
 
   auto vL = [](auto& globalCoord, auto& lamb) {
     Eigen::Vector2d fext;
