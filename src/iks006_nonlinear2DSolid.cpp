@@ -36,8 +36,8 @@
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/observer/controlvtkwriter.hh>
-#include <ikarus/utils/observer/nonlinearsolverlogger.hh>
+#include <ikarus/utils/listener/controlvtkwriter.hh>
+#include <ikarus/utils/listener/nonlinearsolverlogger.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 // The following grid types (gridType) are included in this example
@@ -213,16 +213,16 @@ auto run() {
     }
   }();
 
-  auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
+  auto nonLinearSolverObserver = NonLinearSolverLogger();
 
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>>(
-      basis.flat(), d, 2);
-  vtkWriter->setFileNamePrefix("iks006_nonlinear2DSolid");
-  vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
+  auto vtkWriter = ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>(basis.flat(), d, 2);
+  vtkWriter.setFileNamePrefix("iks006_nonlinear2DSolid");
+  vtkWriter.setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
-  lc.nonLinearSolver().subscribeAll(nonLinearSolverObserver);
-  lc.subscribeAll(vtkWriter);
+
+  nonLinearSolverObserver.subscribeTo(lc.nonlinearSolver());
+  vtkWriter.subscribeTo(lc);
 
   // Postprocessing
   auto vonMisesFunction =
