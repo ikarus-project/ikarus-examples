@@ -42,7 +42,6 @@ int main(int argc, char** argv) {
   auto start = std::chrono::high_resolution_clock::now();
   Ikarus::init(argc, argv);
   constexpr int gridDim     = 2;
-  double lambdaLoad         = 1;
   constexpr int basis_order = 1;
 
   /// read in parameters
@@ -148,9 +147,11 @@ int main(int argc, char** argv) {
       }
 
       auto sparseAssembler   = makeSparseFlatAssembler(fes, dirichletValues);
-      Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
-      auto req               = FEType::Requirement();
-      req.insertGlobalSolution(D_Glob).insertParameter(lambdaLoad);
+
+      auto req = FEType::Requirement(basis);
+      auto& D_Glob = req.globalSolution();
+      auto& lambdaLoad = req.parameter();
+      lambdaLoad = 1.0;
 
       sparseAssembler->bind(req);
       sparseAssembler->bind(Ikarus::DBCOption::Full);
