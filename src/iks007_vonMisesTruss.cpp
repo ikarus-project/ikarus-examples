@@ -156,13 +156,11 @@ int main(int argc, char** argv) {
   /// Create assembler
   auto denseFlatAssembler = makeDenseFlatAssembler(fes, dirichletValues);
 
-  /// Create non-linear operator
-  double lambda = 0;
-  Eigen::VectorXd d;
-  d.setZero(basis.flat().size());
-
-  auto req = AutoDiffFE::Requirement();
-  req.insertGlobalSolution(d).insertParameter(lambda);
+  /// Create fe requirement
+  auto req = AutoDiffFE::Requirement(basis);
+  const auto& d = req.globalSolution();
+  const auto& lambda = req.parameter();
+  
   denseFlatAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
   /// Choose linear solver
