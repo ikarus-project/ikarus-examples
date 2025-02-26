@@ -24,7 +24,7 @@ void newtonRaphsonVeryBasicExample() {
 
   /// Standard implementation
   int iterCount = 1;
-  while (abs(nonLinOp.value()) > eps and iterCount <= maxIter) {
+  while (abs(nonLinOp(x)) > eps and iterCount <= maxIter) {
     const auto f = nonLinOp(x);
     const auto df = derivative(nonLinOp)(x);
     x -= f / df;
