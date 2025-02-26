@@ -25,12 +25,13 @@ void newtonRaphsonVeryBasicExample() {
   /// Standard implementation
   int iterCount = 1;
   while (abs(nonLinOp.value()) > eps and iterCount <= maxIter) {
-    x -= nonLinOp.value() / nonLinOp.derivative();
-    nonLinOp.updateAll();
+    const auto f = nonLinOp(x);
+    const auto df =  derivative(nonLinOp)(x);
+    x -= f / df;
     iterCount++;
 
-    std::cout << "nonlinearOperator, value(): " << nonLinOp.value() << "\n";
-    std::cout << "nonlinearOperator, x: " << nonLinOp.firstParameter() << "\n";
+    std::cout << "f, value: " << f << "\n";
+    std::cout << "nonlinearOperator, x: " << x << "\n";
   }
 
   /// Implementation with Ikarus
