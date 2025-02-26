@@ -60,7 +60,7 @@ void newtonRaphsonBasicExampleWithLogger() {
 
   auto fvLambda  = [&](auto&& x) { return f(x); };
   auto dfvLambda = [&](auto&& x) { return df(x); };
-  Ikarus::NonLinearOperator nonLinOp(Ikarus::functions(fvLambda, dfvLambda), Ikarus::parameter(x));
+  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda),x);
 
   const double eps       = 1e-10;
   const int maxIter      = 20;
