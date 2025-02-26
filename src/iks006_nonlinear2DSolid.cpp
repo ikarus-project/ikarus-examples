@@ -183,12 +183,9 @@ auto run() {
 
   auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
 
-  Eigen::VectorXd d;
-  d.setZero(basis.flat().size());
-  double lambda = 0.0;
-
-  auto req = typename FEType::Requirement();
-  req.insertGlobalSolution(d).insertParameter(lambda);
+  auto req = typename FEType::Requirement(basis);
+  const auto& d = req.globalSolution();
+  const auto& lambda = req.parameter();
 
   sparseAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
