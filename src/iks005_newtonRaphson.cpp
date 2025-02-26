@@ -20,13 +20,13 @@ void newtonRaphsonVeryBasicExample() {
 
   auto fvLambda  = [&](auto&& x) { return func(x); };
   auto dfvLambda = [&](auto&& x) { return funcDerivative(x); };
-  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda),x);
+  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda), x);
 
   /// Standard implementation
   int iterCount = 1;
   while (abs(nonLinOp.value()) > eps and iterCount <= maxIter) {
     const auto f = nonLinOp(x);
-    const auto df =  derivative(nonLinOp)(x);
+    const auto df = derivative(nonLinOp)(x);
     x -= f / df;
     iterCount++;
 
