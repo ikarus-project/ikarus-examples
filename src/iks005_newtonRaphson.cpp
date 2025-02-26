@@ -20,7 +20,7 @@ void newtonRaphsonVeryBasicExample() {
 
   auto fvLambda  = [&](auto&& x) { return f(x); };
   auto dfvLambda = [&](auto&& x) { return df(x); };
-  Ikarus::NonLinearOperator nonLinOp(Ikarus::functions(fvLambda, dfvLambda),x);
+  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda),x);
 
   /// Standard implementation
   int iterCount = 1;
