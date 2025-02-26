@@ -9,8 +9,8 @@
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
-auto f(double& x) { return 0.5 * x * x + x - 2; }
-auto df(double& x) { return x + 1; }
+auto func(const double& x) { return 0.5 * x * x + x - 2; }
+auto funcDerivative(const double& x) { return x + 1; }
 
 void newtonRaphsonVeryBasicExample() {
   double x               = 13;
@@ -18,8 +18,8 @@ void newtonRaphsonVeryBasicExample() {
   const int maxIter      = 20;
   const double xExpected = std::sqrt(5.0) - 1.0;
 
-  auto fvLambda  = [&](auto&& x) { return f(x); };
-  auto dfvLambda = [&](auto&& x) { return df(x); };
+  auto fvLambda  = [&](auto&& x) { return func(x); };
+  auto dfvLambda = [&](auto&& x) { return funcDerivative(x); };
   auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda),x);
 
   /// Standard implementation
