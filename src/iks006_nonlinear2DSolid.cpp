@@ -221,7 +221,7 @@ auto run() {
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
-  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
+  lc.nonLinearSolver().subscribeAll(nonLinearSolverObserver);
   lc.subscribeAll(vtkWriter);
 
   // Postprocessing
