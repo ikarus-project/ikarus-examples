@@ -55,7 +55,7 @@ public:
   using BasisHandler = typename Traits::BasisHandler;
   using FlatBasis    = typename Traits::FlatBasis;
   using Requirement =
-      FERequirement<FESolutions::displacement, FEParameter::loadfactor>;
+      FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
 
   using LocalView   = typename Traits::LocalView;
   using Geometry    = typename Traits::Geometry;
