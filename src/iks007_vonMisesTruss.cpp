@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
 
   /// Create loadcontrol
   auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
-  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
+  lc.nonLinearSolver().subscribeAll(nonLinearSolverObserver);
   lc.subscribeAll({vtkWriter, lvkObserver});
 
   /// Execute!
