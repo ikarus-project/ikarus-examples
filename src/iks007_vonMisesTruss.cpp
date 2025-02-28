@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
   lc.subscribeAll({vtkWriter, lvkObserver});
 
   /// Execute!
-  lc.run();
+  lc.run(req);
 
   /// Postprocess
   using namespace matplot;
