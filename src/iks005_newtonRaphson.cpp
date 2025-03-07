@@ -5,8 +5,8 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
 auto func(const double& x) { return 0.5 * x * x + x - 2; }
@@ -20,7 +20,7 @@ void newtonRaphsonVeryBasicExample() {
 
   auto fvLambda  = [&](auto&& x) { return func(x); };
   auto dfvLambda = [&](auto&& x) { return funcDerivative(x); };
-  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda), x);
+  auto  nonLinOp = Ikarus::makeDifferentiableFunction(Ikarus::functions(fvLambda, dfvLambda), x);
 
   /// Standard implementation
   int iterCount = 1;
@@ -60,7 +60,7 @@ void newtonRaphsonBasicExampleWithLogger() {
 
   auto fvLambda  = [&](auto&& x) { return func(x); };
   auto dfvLambda = [&](auto&& x) { return funcDerivative(x); };
-  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda), x);
+  auto  nonLinOp = Ikarus::makeDifferentiableFunction(Ikarus::functions(fvLambda, dfvLambda), x);
 
   const double eps       = 1e-10;
   const int maxIter      = 20;
