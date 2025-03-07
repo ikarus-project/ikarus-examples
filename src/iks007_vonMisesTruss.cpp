@@ -27,10 +27,10 @@
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/solver/nonlinearsolver/nonlinearsolverfactory.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
-#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/genericobserver.hh>
@@ -57,12 +57,11 @@ public:
   using Traits       = typename PreFE::Traits;
   using BasisHandler = typename Traits::BasisHandler;
   using FlatBasis    = typename Traits::FlatBasis;
-  using Requirement =
-      FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
-  using LocalView = typename Traits::LocalView;
-  using Geometry  = typename Traits::Geometry;
-  using Element   = typename Traits::Element;
-  using Pre       = TrussPre;
+  using Requirement  = FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
+  using LocalView    = typename Traits::LocalView;
+  using Geometry     = typename Traits::Geometry;
+  using Element      = typename Traits::Element;
+  using Pre          = TrussPre;
 
   Truss(Pre pre)
       : EA{pre.EA} {}
@@ -157,10 +156,10 @@ int main(int argc, char** argv) {
   auto denseFlatAssembler = makeDenseFlatAssembler(fes, dirichletValues);
 
   /// Create fe requirement
-  auto req = AutoDiffFE::Requirement(basis);
-  const auto& d = req.globalSolution();
+  auto req           = AutoDiffFE::Requirement(basis);
+  const auto& d      = req.globalSolution();
   const auto& lambda = req.parameter();
-  
+
   denseFlatAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
   /// Choose linear solver
