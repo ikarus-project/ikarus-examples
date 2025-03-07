@@ -56,12 +56,11 @@ public:
   using Traits       = typename PreFE::Traits;
   using BasisHandler = typename Traits::BasisHandler;
   using FlatBasis    = typename Traits::FlatBasis;
-  using Requirement =
-      FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
-  using LocalView = typename Traits::LocalView;
-  using Geometry  = typename Traits::Geometry;
-  using Element   = typename Traits::Element;
-  using Pre       = KirchhoffPlatePre;
+  using Requirement  = FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
+  using LocalView    = typename Traits::LocalView;
+  using Geometry     = typename Traits::Geometry;
+  using Element      = typename Traits::Element;
+  using Pre          = KirchhoffPlatePre;
 
   KirchhoffPlate(Pre pre)
       : Emodul{pre.Emodul},
