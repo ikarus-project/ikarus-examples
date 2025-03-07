@@ -183,8 +183,8 @@ auto run() {
 
   auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
 
-  auto req = typename FEType::Requirement(basis);
-  const auto& d = req.globalSolution();
+  auto req           = typename FEType::Requirement(basis);
+  const auto& d      = req.globalSolution();
   const auto& lambda = req.parameter();
 
   sparseAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
