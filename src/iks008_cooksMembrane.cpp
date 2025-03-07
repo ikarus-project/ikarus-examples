@@ -30,8 +30,8 @@
 #include <ikarus/utils/basis.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
       sparseAssembler->bind(Ikarus::DBCOption::Full);
 
       auto startAssembly = std::chrono::high_resolution_clock::now();
-      auto nonLinOp      = Ikarus::NonLinearOperatorFactory::op(
+      auto nonLinOp      = Ikarus::DifferentiableFunctionFactory::op(
           sparseAssembler,
           Ikarus::AffordanceCollection(Ikarus::VectorAffordance::forces, Ikarus::MatrixAffordance::stiffness));
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
