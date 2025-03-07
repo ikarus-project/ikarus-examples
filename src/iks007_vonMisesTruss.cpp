@@ -30,8 +30,8 @@
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/genericobserver.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
