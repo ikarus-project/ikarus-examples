@@ -28,9 +28,9 @@
 #include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
-#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/init.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
@@ -146,12 +146,12 @@ int main(int argc, char** argv) {
         fes.back().bind(ge);
       }
 
-      auto sparseAssembler   = makeSparseFlatAssembler(fes, dirichletValues);
+      auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
 
-      auto req = FEType::Requirement(basis);
-      auto& D_Glob = req.globalSolution();
+      auto req         = FEType::Requirement(basis);
+      auto& D_Glob     = req.globalSolution();
       auto& lambdaLoad = req.parameter();
-      lambdaLoad = 1.0;
+      lambdaLoad       = 1.0;
 
       sparseAssembler->bind(req);
       sparseAssembler->bind(Ikarus::DBCOption::Full);
