@@ -27,11 +27,11 @@
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
 #include <ikarus/solver/nonlinearsolver/nonlinearsolverfactory.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/genericobserver.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
@@ -57,12 +57,11 @@ public:
   using Traits       = typename PreFE::Traits;
   using BasisHandler = typename Traits::BasisHandler;
   using FlatBasis    = typename Traits::FlatBasis;
-  using Requirement =
-      FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
-  using LocalView = typename Traits::LocalView;
-  using Geometry  = typename Traits::Geometry;
-  using Element   = typename Traits::Element;
-  using Pre       = TrussPre;
+  using Requirement  = FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
+  using LocalView    = typename Traits::LocalView;
+  using Geometry     = typename Traits::Geometry;
+  using Element      = typename Traits::Element;
+  using Pre          = TrussPre;
 
   Truss(Pre pre)
       : EA{pre.EA} {}
@@ -156,13 +155,11 @@ int main(int argc, char** argv) {
   /// Create assembler
   auto denseFlatAssembler = makeDenseFlatAssembler(fes, dirichletValues);
 
-  /// Create non-linear operator
-  double lambda = 0;
-  Eigen::VectorXd d;
-  d.setZero(basis.flat().size());
+  /// Create fe requirement
+  auto req           = AutoDiffFE::Requirement(basis);
+  const auto& d      = req.globalSolution();
+  const auto& lambda = req.parameter();
 
-  auto req = AutoDiffFE::Requirement();
-  req.insertGlobalSolution(d).insertParameter(lambda);
   denseFlatAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
   /// Choose linear solver
@@ -202,11 +199,11 @@ int main(int argc, char** argv) {
 
   /// Create loadcontrol
   auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
-  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
+  lc.nonLinearSolver().subscribeAll(nonLinearSolverObserver);
   lc.subscribeAll({vtkWriter, lvkObserver});
 
   /// Execute!
-  lc.run();
+  lc.run(req);
 
   /// Postprocess
   using namespace matplot;

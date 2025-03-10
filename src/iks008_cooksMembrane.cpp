@@ -28,10 +28,10 @@
 #include <ikarus/finiteelements/mechanics/materials/vanishingstress.hh>
 #include <ikarus/solver/linearsolver/linearsolver.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
@@ -42,7 +42,6 @@ int main(int argc, char** argv) {
   auto start = std::chrono::high_resolution_clock::now();
   Ikarus::init(argc, argv);
   constexpr int gridDim     = 2;
-  double lambdaLoad         = 1;
   constexpr int basis_order = 1;
 
   /// read in parameters
@@ -147,16 +146,18 @@ int main(int argc, char** argv) {
         fes.back().bind(ge);
       }
 
-      auto sparseAssembler   = makeSparseFlatAssembler(fes, dirichletValues);
-      Eigen::VectorXd D_Glob = Eigen::VectorXd::Zero(basis.flat().size());
-      auto req               = FEType::Requirement();
-      req.insertGlobalSolution(D_Glob).insertParameter(lambdaLoad);
+      auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
+
+      auto req         = FEType::Requirement(basis);
+      auto& D_Glob     = req.globalSolution();
+      auto& lambdaLoad = req.parameter();
+      lambdaLoad       = 1.0;
 
       sparseAssembler->bind(req);
       sparseAssembler->bind(Ikarus::DBCOption::Full);
 
       auto startAssembly = std::chrono::high_resolution_clock::now();
-      auto nonLinOp      = Ikarus::NonLinearOperatorFactory::op(
+      auto nonLinOp      = Ikarus::DifferentiableFunctionFactory::op(
           sparseAssembler,
           Ikarus::AffordanceCollection(Ikarus::VectorAffordance::forces, Ikarus::MatrixAffordance::stiffness));
       auto stopAssembly     = std::chrono::high_resolution_clock::now();
@@ -165,8 +166,8 @@ int main(int argc, char** argv) {
                    durationAssembly.count(), numberOfEASParameters, basis.flat().size());
 
       timeVec.push_back(durationAssembly.count());
-      const auto& K    = nonLinOp.derivative();
-      const auto& Fext = nonLinOp.value();
+      const auto& K    = derivative(nonLinOp)(req);
+      const auto& Fext = nonLinOp(req);
 
       /// solve the linear system
       auto linSolver   = Ikarus::LinearSolver(Ikarus::SolverTypeTag::sd_CholmodSupernodalLLT);

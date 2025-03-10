@@ -32,10 +32,10 @@
 #include <ikarus/solver/nonlinearsolver/trustregion.hh>
 #include <ikarus/utils/algorithms.hh>
 #include <ikarus/utils/basis.hh>
+#include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
@@ -183,12 +183,9 @@ auto run() {
 
   auto sparseAssembler = makeSparseFlatAssembler(fes, dirichletValues);
 
-  Eigen::VectorXd d;
-  d.setZero(basis.flat().size());
-  double lambda = 0.0;
-
-  auto req = typename FEType::Requirement();
-  req.insertGlobalSolution(d).insertParameter(lambda);
+  auto req           = typename FEType::Requirement(basis);
+  const auto& d      = req.globalSolution();
+  const auto& lambda = req.parameter();
 
   sparseAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
@@ -224,7 +221,7 @@ auto run() {
   vtkWriter->setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
-  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
+  lc.nonLinearSolver().subscribeAll(nonLinearSolverObserver);
   lc.subscribeAll(vtkWriter);
 
   // Postprocessing
