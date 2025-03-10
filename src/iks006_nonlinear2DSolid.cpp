@@ -221,7 +221,7 @@ auto run() {
 
   auto lc = Ikarus::LoadControl(nonlinSolver, 20, {0, 2000});
 
-  nonLinearSolverObserver.subscribeTo(lc.nonlinearSolver());
+  nonLinearSolverObserver.subscribeTo(lc.nonLinearSolver());
   vtkWriter.subscribeTo(lc);
 
   // Postprocessing
