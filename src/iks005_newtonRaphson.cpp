@@ -5,9 +5,10 @@
 
 #include <ikarus/assembler/simpleassemblers.hh>
 #include <ikarus/solver/nonlinearsolver/newtonraphson.hh>
+#include <ikarus/utils/broadcaster/broadcastermessages.hh>
 #include <ikarus/utils/differentiablefunction.hh>
 #include <ikarus/utils/init.hh>
-#include <ikarus/utils/observer/nonlinearsolverlogger.hh>
+#include <ikarus/utils/listener/listener.hh>
 
 auto func(const double& x) { return 0.5 * x * x + x - 2; }
 auto funcDerivative(const double& x) { return x + 1; }
@@ -46,10 +47,16 @@ void newtonRaphsonVeryBasicExample() {
   std::cout << "expected solution: " << xExpected << "\n";
 }
 
-class OurFirstObserver : public Ikarus::IObserver<Ikarus::NonLinearSolverMessages>
+class OurFirstListener : public Ikarus::Listener
 {
 public:
-  void updateImpl(Ikarus::NonLinearSolverMessages message) override {
+  template <typename BC>
+  OurFirstListener& subscribeTo(BC& bc) {
+    this->subscribe(bc, [&](Ikarus::NonLinearSolverMessages message) { this->updateImpl(message); });
+    return *this;
+  }
+
+  void updateImpl(Ikarus::NonLinearSolverMessages message) {
     if (message == Ikarus::NonLinearSolverMessages::ITERATION_STARTED)
       std::cout << "Iteration started.\n";
   }
@@ -70,8 +77,8 @@ void newtonRaphsonBasicExampleWithLogger() {
   nr.setup({eps, maxIter});
 
   // create observer and subscribe to Newton-Rhapson
-  auto ourSimpleObserver = std::make_shared<OurFirstObserver>();
-  nr.subscribe(Ikarus::NonLinearSolverMessages::ITERATION_STARTED, ourSimpleObserver);
+  auto ourSimpleListener = OurFirstListener();
+  ourSimpleListener.subscribeTo(nr);
   // nr.subscribeAll(ourSimpleObserver);
   // auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
   // nr.subscribe(Ikarus::NonLinearSolverMessages::FINISHED_SUCESSFULLY,
