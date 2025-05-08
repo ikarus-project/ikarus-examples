@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>(basis.flat(), d, 2);
+  auto vtkWriter = ControlSubsamplingVertexVTKWriter(basis.flat(), 2);
   vtkWriter.setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter.setFileNamePrefix("iks007_vonMisesTruss");
 

@@ -215,7 +215,7 @@ auto run() {
 
   auto nonLinearSolverObserver = NonLinearSolverLogger();
 
-  auto vtkWriter = ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>(basis.flat(), d, 2);
+  auto vtkWriter = ControlSubsamplingVertexVTKWriter(basis.flat(), 2);
   vtkWriter.setFileNamePrefix("iks006_nonlinear2DSolid");
   vtkWriter.setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
 
