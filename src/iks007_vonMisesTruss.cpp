@@ -181,16 +181,6 @@ int main(int argc, char** argv) {
   const int loadSteps = 10;
   Eigen::Matrix3Xd lambdaAndDisp;
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
-  /// Create Observer which executes when control routines messages
-  /// SOLUTION_CHANGED
-  auto lvkObserver = GenericListener(lc, ControlMessages::SOLUTION_CHANGED, [&](const auto& state) {
-    const auto& d          = state.domain.globalSolution();
-    const auto& lambda     = state.domain.parameter();
-    int step               = state.loadStep;
-    lambdaAndDisp(0, step) = lambda; // load factor
-    lambdaAndDisp(1, step) = d[2];   // horizontal displacement at center node
-    lambdaAndDisp(2, step) = d[3];   // vertical displacement at center node
-  });
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
@@ -203,7 +193,17 @@ int main(int argc, char** argv) {
 
   nonLinearSolverObserver.subscribeTo(lc.nonLinearSolver());
   vtkWriter.subscribeTo(lc);
-  lvkObserver.subscribeTo(lc);
+
+  /// Create Observer which executes when control routines messages
+  /// SOLUTION_CHANGED
+  auto lvkObserver = GenericListener(lc, ControlMessages::SOLUTION_CHANGED, [&](const auto& state) {
+    const auto& d          = state.domain.globalSolution();
+    const auto& lambda     = state.domain.parameter();
+    int step               = state.loadStep;
+    lambdaAndDisp(0, step) = lambda; // load factor
+    lambdaAndDisp(1, step) = d[2];   // horizontal displacement at center node
+    lambdaAndDisp(2, step) = d[3];   // vertical displacement at center node
+  });
 
   /// Execute!
   lc.run(req);
