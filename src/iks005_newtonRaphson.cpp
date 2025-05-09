@@ -52,7 +52,8 @@ class OurFirstListener : public Ikarus::Listener
 public:
   template <typename BC>
   OurFirstListener& subscribeTo(BC& bc) {
-    this->subscribe(bc, [&](Ikarus::NonLinearSolverMessages message) { this->updateImpl(message); });
+    this->subscribe(
+        bc, [&](Ikarus::NonLinearSolverMessages message, const BC::State& state) { this->updateImpl(message); });
     return *this;
   }
 
@@ -79,10 +80,6 @@ void newtonRaphsonBasicExampleWithLogger() {
   // create observer and subscribe to Newton-Rhapson
   auto ourSimpleListener = OurFirstListener();
   ourSimpleListener.subscribeTo(nr);
-  // nr.subscribeAll(ourSimpleObserver);
-  // auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
-  // nr.subscribe(Ikarus::NonLinearSolverMessages::FINISHED_SUCESSFULLY,
-  // nonLinearSolverObserver); nr.subscribeAll(nonLinearSolverObserver);
 
   const auto solverInfo = nr.solve(x);
   if (solverInfo.success)
