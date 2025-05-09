@@ -81,9 +81,6 @@ void newtonRaphsonBasicExampleWithLogger() {
   auto ourSimpleListener = OurFirstListener();
   ourSimpleListener.subscribeTo(nr);
 
-  auto nonLinearSolverObserver = NonLinearSolverLogger();
-  nonLinearSolverObserver.subscribeTo(lc.nonLinearSolver());
-
   const auto solverInfo = nr.solve(x);
   if (solverInfo.success)
     std::cout << "solution: " << x << "\n";
