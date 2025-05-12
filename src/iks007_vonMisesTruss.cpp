@@ -176,7 +176,8 @@ int main(int argc, char** argv) {
 
   /// Create Observer to write information of the non-linear solver on the
   /// console
-  auto nonLinearSolverObserver = NonLinearSolverLogger();
+  auto nonLinearSolverLogger = NonLinearSolverLogger();
+  auto controlLogger         = ControlLogger();
 
   const int loadSteps = 10;
   Eigen::Matrix3Xd lambdaAndDisp;
@@ -191,18 +192,19 @@ int main(int argc, char** argv) {
   /// Create loadcontrol
   auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
 
-  nonLinearSolverObserver.subscribeTo(lc.nonLinearSolver());
+  controlLogger.subscribeTo(lc);
+  nonLinearSolverLogger.subscribeTo(lc.nonLinearSolver());
   vtkWriter.subscribeTo(lc);
 
   /// Create Observer which executes when control routines messages
   /// SOLUTION_CHANGED
   auto lvkObserver = GenericListener(lc, ControlMessages::SOLUTION_CHANGED, [&](const auto& state) {
-    const auto& d          = state.domain.globalSolution();
-    const auto& lambda     = state.domain.parameter();
-    int step               = state.loadStep;
-    lambdaAndDisp(0, step) = lambda; // load factor
-    lambdaAndDisp(1, step) = d[2];   // horizontal displacement at center node
-    lambdaAndDisp(2, step) = d[3];   // vertical displacement at center node
+    const auto& d              = state.domain.globalSolution();
+    const auto& lambda         = state.domain.parameter();
+    int step                   = state.loadStep;
+    lambdaAndDisp(0, step + 1) = lambda; // load factor
+    lambdaAndDisp(1, step + 1) = d[2];   // horizontal displacement at center node
+    lambdaAndDisp(2, step + 1) = d[3];   // vertical displacement at center node
   });
 
   /// Execute!
