@@ -32,6 +32,7 @@
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
+#include <ikarus/utils/listener/controllogger.hh>
 #include <ikarus/utils/listener/controlvtkwriter.hh>
 #include <ikarus/utils/listener/genericlistener.hh>
 #include <ikarus/utils/listener/nonlinearsolverlogger.hh>
