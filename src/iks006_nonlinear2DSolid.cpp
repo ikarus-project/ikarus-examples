@@ -132,9 +132,9 @@ auto run() {
   using namespace Dune::Functions::BasisFactory;
   auto basis = [&]() {
     if constexpr (gt == GridType::ALUGrid or gt == GridType::YaspGrid)
-      return Ikarus::makeBasis(gridView, power<gridDim>(lagrange<1>()));
+      return Ikarus::makeBasis(gridView, power<gridDim>(lagrange<1>(), FlatInterleaved{}));
     else if constexpr (gt == GridType::NURBSGrid)
-      return Ikarus::makeBasis(gridView, power<gridDim>(nurbs()));
+      return Ikarus::makeBasis(gridView, power<gridDim>(nurbs(), FlatInterleaved{}));
   }();
 
   std::cout << "This gridview contains: " << std::endl;
@@ -215,7 +215,7 @@ auto run() {
 
   auto nonLinearSolverObserver = NonLinearSolverLogger();
 
-  auto vtkWriter = ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>(basis.flat(), d, 2);
+  auto vtkWriter = ControlSubsamplingVertexVTKWriter(basis.flat(), 2);
   vtkWriter.setFileNamePrefix("iks006_nonlinear2DSolid");
   vtkWriter.setFieldInfo("Displacement", Dune::VTK::FieldInfo::Type::vector, 2);
 

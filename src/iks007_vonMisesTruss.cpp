@@ -32,6 +32,7 @@
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
+#include <ikarus/utils/listener/controllogger.hh>
 #include <ikarus/utils/listener/controlvtkwriter.hh>
 #include <ikarus/utils/listener/genericlistener.hh>
 #include <ikarus/utils/listener/nonlinearsolverlogger.hh>
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
 
   /// Construct basis
   using namespace Dune::Functions::BasisFactory;
-  auto basis = Ikarus::makeBasis(gridView, power<2>(lagrange<1>()));
+  auto basis = Ikarus::makeBasis(gridView, power<2>(lagrange<1>(), FlatInterleaved{}));
 
   /// Create finite elements
   const double EA  = 100;
@@ -176,32 +177,36 @@ int main(int argc, char** argv) {
 
   /// Create Observer to write information of the non-linear solver on the
   /// console
-  auto nonLinearSolverObserver = NonLinearSolverLogger();
+  auto nonLinearSolverLogger = NonLinearSolverLogger();
+  auto controlLogger         = ControlLogger();
 
   const int loadSteps = 10;
   Eigen::Matrix3Xd lambdaAndDisp;
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
-  /// Create Observer which executes when control routines messages
-  /// SOLUTION_CHANGED
-  auto lvkObserver =
-      Ikarus::GenericListener<Ikarus::ControlMessages>(Ikarus::ControlMessages::SOLUTION_CHANGED, [&](int step) {
-        lambdaAndDisp(0, step) = lambda;
-        lambdaAndDisp(1, step) = d[2];
-        lambdaAndDisp(2, step) = d[3];
-      });
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>(basis.flat(), d, 2);
+  auto vtkWriter = ControlSubsamplingVertexVTKWriter(basis.flat(), 2);
   vtkWriter.setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
   vtkWriter.setFileNamePrefix("iks007_vonMisesTruss");
 
   /// Create loadcontrol
   auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
 
-  nonLinearSolverObserver.subscribeTo(lc.nonLinearSolver());
+  controlLogger.subscribeTo(lc);
+  nonLinearSolverLogger.subscribeTo(lc.nonLinearSolver());
   vtkWriter.subscribeTo(lc);
-  lvkObserver.subscribeTo(lc);
+
+  /// Create Observer which executes when control routines messages
+  /// SOLUTION_CHANGED
+  auto lvkObserver = GenericListener(lc, ControlMessages::SOLUTION_CHANGED, [&](const auto& state) {
+    const auto& d              = state.domain.globalSolution();
+    const auto& lambda         = state.domain.parameter();
+    int step                   = state.loadStep;
+    lambdaAndDisp(0, step + 1) = lambda; // load factor
+    lambdaAndDisp(1, step + 1) = d[2];   // horizontal displacement at center node
+    lambdaAndDisp(2, step + 1) = d[3];   // vertical displacement at center node
+  });
 
   /// Execute!
   lc.run(req);
