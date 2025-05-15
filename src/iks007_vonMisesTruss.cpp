@@ -199,8 +199,7 @@ int main(int argc, char** argv) {
 
   /// Create Observer which executes when control routines messages
   /// SOLUTION_CHANGED
-  auto lvkObserver = GenericListener(ControlMessages::SOLUTION_CHANGED);
-  lvkObserver.subscribeTo(lc, [&](const auto& state) {
+  auto lvkObserver = GenericListener(lc, ControlMessages::SOLUTION_CHANGED, [&](const auto& state) {
     const auto& d              = state.domain.globalSolution();
     const auto& lambda         = state.domain.parameter();
     int step                   = state.loadStep;

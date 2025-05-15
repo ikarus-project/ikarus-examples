@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
 
   using namespace Dune::Functions::BasisFactory;
   /// Construct basis
-  auto basis = Ikarus::makeBasis(gridView, composite(power<2>(lagrange<1>()), lagrange<0>()));
+  auto basis = Ikarus::makeBasis(gridView, composite(power<2>(lagrange<1>()), lagrange<0>(), BlockedInterleaved{}));
 
   /// Create finite elements
   const double Emod = 2.1e1;
