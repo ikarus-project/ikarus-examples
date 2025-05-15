@@ -188,7 +188,8 @@ void exampleTimoshenkoBeam(const int polynomialOrderW, const int polynomialOrder
   // draw(gridView);
 
   /// Basis  with different orders for w (first) and phi (second)
-  auto basis     = Ikarus::makeBasis(gridView, composite(lagrange(polynomialOrderW), lagrange(polynomialOrderPhi), BlockedLexicographic{}));
+  auto basis = Ikarus::makeBasis(
+      gridView, composite(lagrange(polynomialOrderW), lagrange(polynomialOrderPhi), BlockedLexicographic{}));
   auto localView = basis.flat().localView();
 
   /// global stiffness matrix and force vector
