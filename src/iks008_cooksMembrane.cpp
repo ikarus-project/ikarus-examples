@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
       auto numberOfEASParameters = easSet(nep);
 
       using namespace Dune::Functions::BasisFactory;
-      auto basis = Ikarus::makeBasis(gridView, power<gridDim>(lagrange<basis_order>()));
+      auto basis = Ikarus::makeBasis(gridView, power<gridDim>(lagrange<basis_order>(), FlatInterleaved{}));
 
       /// clamp left-hand side
       auto basisP = std::make_shared<const decltype(basis)>(basis);
